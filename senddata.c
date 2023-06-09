@@ -1,4 +1,5 @@
 #include <alsa/asoundlib.h>
+#include "bmidi.h"
 
 int main(int argc, char **argv)
 {
@@ -9,7 +10,7 @@ int main(int argc, char **argv)
 
   int pos_off;
   sscanf(argv[2], "%d", &pos_off);
-  printf("offset: 8*%d=%d\n", pos_off, pos_off*8);
+  printf("offset: 16*%d=%d\n", pos_off, pos_off*16);
 
   int status = snd_rawmidi_open(&input, &output, port_name, 0);
 
@@ -28,18 +29,17 @@ int main(int argc, char **argv)
   char buffer[4096*4];
   int size = fread(buffer, 1, 4096*4, readin);
   printf("we are gonna transfer up to %d\n", size);
-  int segs = ((size+7)&(~7)) >> 3;
+  int segs = ((size+15)&(~15)) >> 4;
   printf("that's segments %d\n", segs);
 
   for (int seg = 0; seg < segs; seg += 1) {
     int pos_low = seg & 0x7f;
     int pos_high = (seg >> 7) & 0x7f;
-
-    int buf_pos = 8*seg;
+    int buf_pos = 16*seg;
 
     unsigned char *bytes = (unsigned char*)(buffer+buf_pos);
 
-    uint8_t data[17] = "\xf0hello sysex\xf7";
+    uint8_t data[25] = "\xf0hello sysex\xf7";
     data[0] = 0xf0;
     data[1]= 0x67;
     data[2] = 0; // WRITE
@@ -47,17 +47,8 @@ int main(int argc, char **argv)
     data[4] = pos_high;
     int len = 0;
 
-    int hi = 0;
-    for (int i = 0; i < 7; i++) {
-      data[5+i] = bytes[i] & 0x7f;
-      hi |= (bytes[i]&0x80) ? (1<<i) : 0;
-    }
-    data[5+7] = bytes[7] & 0x7f;
-    data[13] = hi;
-    data[14] = (bytes[7] & 0x80) ? 1 : 0;
-    data[15] = 42; //not used :P
-    data[16] = 0xf7;
-    len = 17;
+    bytes_to_msg(data, bytes);
+    len = 25;
 
     status = snd_rawmidi_write(output, data, len);
     usleep(10);
