@@ -18,3 +18,14 @@ static inline void bytes_to_msg(unsigned char msg[25], unsigned char bytes[16]) 
     msg[5+18] = f;
     msg[5+19] = 0xf7;
 }
+
+static inline uint32_t __ac_X31_hash_string(const char *s, int len)
+{
+  if (!len) return 0;
+  uint32_t h = (uint32_t)*s;
+  for (int i = 1 ; i < len; ++i) {
+    h = (h << 5) - h + (uint32_t)s[i];
+  }
+  return h;
+}
+

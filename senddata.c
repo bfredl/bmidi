@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     if (!readin) return 10;
   }
 
-  char buffer[4096*4];
+  char buffer[4096*4] = {0};
   int size = fread(buffer, 1, 4096*4, readin);
   printf("we are gonna transfer up to %d\n", size);
   int segs = ((size+15)&(~15)) >> 4;
