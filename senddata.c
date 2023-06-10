@@ -32,6 +32,10 @@ int main(int argc, char **argv)
   int segs = ((size+15)&(~15)) >> 4;
   printf("that's segments %d\n", segs);
 
+  uint32_t hash = __ac_X31_hash_string(buffer, size);
+  printf("hash in dec: %u vs %d\n", hash, hash);
+  printf("hash in hex: %08x\n", hash);
+
   for (int seg = 0; seg < segs; seg += 1) {
     int pos_low = seg & 0x7f;
     int pos_high = (seg >> 7) & 0x7f;

@@ -19,7 +19,7 @@ static inline void bytes_to_msg(unsigned char msg[25], unsigned char bytes[16]) 
     msg[5+19] = 0xf7;
 }
 
-static inline uint32_t __ac_X31_hash_string(const char *s, int len)
+static inline uint32_t __ac_X31_hash_string(const unsigned char *s, int len)
 {
   if (!len) return 0;
   uint32_t h = (uint32_t)*s;
