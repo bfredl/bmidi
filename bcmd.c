@@ -60,6 +60,25 @@ int main(int argc, char **argv)
   }
 
   int has_bytes = 0;
+  uint8_t bytes[16] = {0};
+  if (argc >= 5) {
+    if (!is_exec) return 27;  // TODO: inte såå
+    has_bytes = 1;
+
+    char *byte_form = argv[4];
+    if (!strcmp(byte_form, "int")) {
+      int iargc = argc-5;
+      if (iargc < 1 || iargc > 4) return 55;
+      for (int i = 0; i < iargc; i++) {
+        int datta;
+        sscanf(argv[5+i], "%d", &datta);
+        memcpy(bytes+4*i, &datta, 4);
+        // printf("bytta %d: %d\n", i, datta);
+      }
+    } else {
+      return 75;
+    }
+  }
 
   int pos_low = pos & 0x7f;
   int pos_high = (pos >> 7) & 0x7f;
@@ -74,9 +93,15 @@ int main(int argc, char **argv)
   data[4] = pos_high;
   data[5] = x;
   if (is_exec) {
-    data[6] = y;
-    data[7] = 0xf7;
-    len = 8;
+    if (has_bytes) {
+      bytes_to_msg(data, bytes);
+      data[23] |= addr_x;  // twiddly!
+      len = 25;
+    } else {
+      data[6] = y;
+      data[7] = 0xf7;
+      len = 8;
+    }
   } else {
     data[6] = 0xf7;
     len = 7;
