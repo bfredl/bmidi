@@ -1,2 +1,8 @@
 bmidi
 senddata
+bcmd
+checkhash
+DelugeFirmware
+*.bin
+*.bin2
+*.elf
