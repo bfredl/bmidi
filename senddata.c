@@ -32,7 +32,7 @@ int main(int argc, char **argv)
   int segs = ((size+15)&(~15)) >> 4;
   printf("that's segments %d\n", segs);
 
-  uint32_t hash = __ac_X31_hash_string(buffer, size);
+  uint32_t hash = __ac_X31_hash_string((unsigned char*)buffer, size);
   printf("hash in dec: %u vs %d\n", hash, hash);
   printf("hash in hex: %08x\n", hash);
 
@@ -58,5 +58,21 @@ int main(int argc, char **argv)
     usleep(10);
   }
   
+  uint8_t data[25] = "\xf0hello sysex\xf7";
+  data[0] = 0xf0;
+  data[1]= 0x67;
+  data[2] = 24; // HASH
+  data[3] = 0; // unused, we use bytes
+  data[4] = 0; //
+  uint32_t ibytes[4] = {0};
+  
+  ibytes[0] = pos_off*16;  // start
+  ibytes[1] = size;
+
+  bytes_to_msg(data, (unsigned char *)ibytes);
+  int len = 25;
+
+  status = snd_rawmidi_write(output, data, len);
+
 
 }
