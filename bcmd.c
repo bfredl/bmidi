@@ -22,6 +22,8 @@ int main(int argc, char **argv)
   char *addrform = argv[3];
 
   if (!strcmp(cname, "exec")) {
+    cmd = 1; //
+  } else if (!strcmp(cname, "execnr")) {
     cmd = 2; // int output
   } else if (!strcmp(cname, "peek")) {
     cmd = 17;
