@@ -17,6 +17,9 @@ CXX = arm-none-eabi-g++
 
 all: checksum.o
 
+# myyyyyy precious
+.PRECIOUS: %.elf 
+
 .o.bin:
 	arm-none-eabi-objcopy -O binary -j .text $< $@
 
