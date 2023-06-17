@@ -11,7 +11,7 @@ CXXFLAGS = $(CFLAGS)
 # table so we can adress this
 FW_ELF = DelugeFirmware/e2-build-release-oled/DelugeFirmware-release-oled.elf
 
-.SUFFIXES: .bin .elf .bin2
+.SUFFIXES: .bin .elf .bin
 CC = arm-none-eabi-gcc
 CXX = arm-none-eabi-g++
 
@@ -20,14 +20,11 @@ all: checksum.o
 # myyyyyy precious
 .PRECIOUS: %.elf 
 
-.o.bin:
-	arm-none-eabi-objcopy -O binary -j .text $< $@
-
 # this is a bit of a hacky whacky. currently the load adress is so low (8000), so ld is forced to generate
 # indirect jumps with fixed address. This works but is inefficient. make a linker script which makes the
 # load position explicit which is both correct (no nasty surprises) and gives more efficient code.
-.o.elf: $(FW_ELF)
-	arm-none-eabi-c++ $(BASEFLAGS) -nostartfiles -Wl,-R,$(FW_ELF) $< -o $@
+.o.elf: $(FW_ELF) module.ld startup.o
+	arm-none-eabi-c++ $(BASEFLAGS) -nostartfiles -T module.ld -Wl,-R,$(FW_ELF) startup.o $< -o $@
 
-.elf.bin2:
+.elf.bin:
 	arm-none-eabi-objcopy -O binary $< $@

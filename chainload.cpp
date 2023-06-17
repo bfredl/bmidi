@@ -6,7 +6,7 @@
 extern "C" void EXEC_BASE(void);
 void chainloader(char *to, char *from, int size);
 
-void chainload(int *base, int *bytta) {
+void mod_main(int *base, int *bytta) {
   const char *path = "IMAGES/chain.bin";
 
   FILINFO fno;

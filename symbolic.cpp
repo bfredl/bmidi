@@ -1,4 +1,5 @@
 #include "oled.h"
-void glugg() {
+
+extern void mod_main(int*,int*) {
   OLED::popupText("harow", true);
 }
