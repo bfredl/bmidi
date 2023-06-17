@@ -8,9 +8,16 @@ int main(int argc, char **argv)
   static snd_rawmidi_t *input;
   static snd_rawmidi_t *output;
 
+  int exec = 0;
+
   int pos_off;
-  sscanf(argv[2], "%d", &pos_off);
-  printf("offset: 16*%d=%d\n", pos_off, pos_off*16);
+  if (!strcmp(argv[2], "exec")) {
+    exec = 1;
+    pos_off = 0;
+  } else {
+    sscanf(argv[2], "%d", &pos_off);
+    printf("offset: 16*%d=%d\n", pos_off, pos_off*16);
+  }
 
   int status = snd_rawmidi_open(&input, &output, port_name, 0);
 
@@ -73,6 +80,34 @@ int main(int argc, char **argv)
   int len = 25;
 
   status = snd_rawmidi_write(output, data, len);
+  if (status < 0) {
+    fprintf(stderr, "no write! %s", snd_strerror(status));
+    return 11;
+  }
 
+  if (!exec) return 0;
 
+  // HAMMERTIME
+  data[2] = 22;
+  data[6] = 0xf7;
+  len = 7;
+  status = snd_rawmidi_write(output, data, len);
+  if (status < 0) {
+    fprintf(stderr, "no write! %s", snd_strerror(status));
+  }
+
+  printf("hash ok? ret=yes, ctrl-c=no\n");
+  getc(stdin);
+
+  usleep(100);
+  data[2] = 1;
+  data[3] = 0;
+  data[4] = 0;
+  data[5] = 0;
+  data[6] = 0xf7;
+  len = 7;
+  status = snd_rawmidi_write(output, data, len);
+  if (status < 0) {
+    fprintf(stderr, "no write! %s", snd_strerror(status));
+  }
 }

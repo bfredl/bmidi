@@ -30,3 +30,6 @@ all: chainload.bin symbolic.bin
 
 clean:
 	rm *.elf *.bin *.o
+
+%.exec : %.bin
+	./senddata hw:2,0,0 exec $<
