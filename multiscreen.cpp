@@ -37,15 +37,13 @@ int MultiScreen::padAction(int x, int y, int velocity) {
 
   char modelStackMemory[MODEL_STACK_MAX_SIZE];
   ModelStack* modelStack = setupModelStackWithSong(modelStackMemory, currentSong);
-  Instrument* instrument = (Instrument*)currentSong->currentClip->output;
+  auto instrument = (MelodicInstrument*)currentSong->currentClip->output;
   if (!instrument) {
-    // neee
     return ACTION_RESULT_DEALT_WITH;
   }
 
   int noteCode = 60+x;
   if (velocity) {
-
     // Ensure the note the user is trying to sound isn't already sounding
     NoteRow* noteRow = ((InstrumentClip*)instrument->activeClip)->getNoteRowForYNote(noteCode);
     if (noteRow) {
@@ -53,9 +51,9 @@ int MultiScreen::padAction(int x, int y, int velocity) {
     }
 
     int velocityToSound = 40+10*y;
-    ((MelodicInstrument*)instrument) ->beginAuditioningForNote(modelStack, noteCode, velocityToSound, zeroMPEValues);
+    instrument->beginAuditioningForNote(modelStack, noteCode, velocityToSound, zeroMPEValues);
   } else {
-    ((MelodicInstrument*)instrument)->endAuditioningForNote(modelStack, noteCode);
+    instrument->endAuditioningForNote(modelStack, noteCode);
   }
 
   return ACTION_RESULT_DEALT_WITH;
