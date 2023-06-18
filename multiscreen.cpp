@@ -1,11 +1,18 @@
 #include "oled.h"
 #include <RootUI.h>
 #include <new>
+#include "extern.h"
+#include "soundeditor.h"
+#include <soundinstrument.h>
+#include "song.h"
+#include "InstrumentClip.h"
+#include "NoteRow.h"
+#include "ModelStack.h"
 
 class MultiScreen final : public UI {
 public:
   MultiScreen() {};
-  // int padAction(int x, int y, int velocity);
+  int padAction(int x, int y, int velocity);
   int buttonAction(int x, int y, bool on, bool inCardRoutine);
 
 #if HAVE_OLED
@@ -14,6 +21,45 @@ public:
 
   bool did_button = false;
 };
+
+int MultiScreen::padAction(int x, int y, int velocity) {
+
+  if (x >= displayWidth) return ACTION_RESULT_DEALT_WITH;
+
+  if (sdRoutineLock && !allowSomeUserActionsEvenWhenInCardRoutine) {
+    return ACTION_RESULT_REMIND_ME_OUTSIDE_CARD_ROUTINE; // Allow some of the time when in card routine.
+  }
+
+  int soundEditorResult = soundEditor.potentialShortcutPadAction(x, y, velocity);
+  if (soundEditorResult != ACTION_RESULT_NOT_DEALT_WITH) {
+    return soundEditorResult;
+  }
+
+  char modelStackMemory[MODEL_STACK_MAX_SIZE];
+  ModelStack* modelStack = setupModelStackWithSong(modelStackMemory, currentSong);
+  Instrument* instrument = (Instrument*)currentSong->currentClip->output;
+  if (!instrument) {
+    // neee
+    return ACTION_RESULT_DEALT_WITH;
+  }
+
+  int noteCode = 60+x;
+  if (velocity) {
+
+    // Ensure the note the user is trying to sound isn't already sounding
+    NoteRow* noteRow = ((InstrumentClip*)instrument->activeClip)->getNoteRowForYNote(noteCode);
+    if (noteRow) {
+      if (noteRow->soundingStatus == STATUS_SEQUENCED_NOTE) return ACTION_RESULT_DEALT_WITH;
+    }
+
+    int velocityToSound = 40+10*y;
+    ((MelodicInstrument*)instrument) ->beginAuditioningForNote(modelStack, noteCode, velocityToSound, zeroMPEValues);
+  } else {
+    ((MelodicInstrument*)instrument)->endAuditioningForNote(modelStack, noteCode);
+  }
+
+  return ACTION_RESULT_DEALT_WITH;
+}
 
 #if HAVE_OLED
 void MultiScreen::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
