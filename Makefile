@@ -17,7 +17,7 @@ CXX = arm-none-eabi-g++
 all: chainload.bin symbolic.bin
 
 # myyyyyy precious
-.PRECIOUS: %.elf %.o
+.PRECIOUS: %.elf %.o %.bin
 
 # this is a bit of a hacky whacky. currently the load adress is so low (8000), so ld is forced to generate
 # indirect jumps with fixed address. This works but is inefficient. make a linker script which makes the
