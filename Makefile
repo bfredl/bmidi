@@ -3,7 +3,7 @@ FW_INCLUDE = -I$(DELUGE_PATH)/src/drivers/RZA1 -I$(DELUGE_PATH)/src/drivers/All_
 
 # TODO: pic should not be used. we need to set the load adress explicitly
 BASEFLAGS = -mcpu=cortex-a9 -marm -mthumb-interwork -mlittle-endian -mfloat-abi=hard -mfpu=neon -Og  -fmessage-length=0 -fsigned-char
-CFLAGS = $(BASEFLAGS) $(FW_INCLUDE) -DHAVE_RTT=0 -DHAVE_OLED=1
+CFLAGS = $(BASEFLAGS) $(FW_INCLUDE) -DHAVE_RTT=0 -DHAVE_OLED=1 -fno-rtti -fno-exceptions -fabi-version=0
 CXXFLAGS = $(CFLAGS)
 
 # NOTE: the -s flag in the build rule for DelugeFirmware-release-oled.elf must be removed!
