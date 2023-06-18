@@ -37,8 +37,33 @@ int MultiScreen::padAction(int x, int y, int velocity) {
 
   char modelStackMemory[MODEL_STACK_MAX_SIZE];
   ModelStack* modelStack = setupModelStackWithSong(modelStackMemory, currentSong);
+
+  if (y == 0) {
+    Output *out = currentSong->firstOutput;
+    while (out) {
+      if (out->type != INSTRUMENT_TYPE_KIT) {
+        out = out->next;
+      }
+    }
+    if (!out) {
+      return ACTION_RESULT_DEALT_WITH;
+    }
+    InstrumentClip *clip = (InstrumentClip *)out->activeClip;
+    if (!clip) {
+      return ACTION_RESULT_DEALT_WITH;
+    }
+		ModelStackWithTimelineCounter* modelStackWithTimelineCounter = modelStack->addTimelineCounter(clip);
+
+    int noteRowIndex;
+    ModelStackWithNoteRow* modelStackWithNoteRow = clip->getNoteRowForYNote(x, modelStackWithTimelineCounter);
+
+    auto kit = (Kit *)out;
+
+    // .........
+  }
+
   auto instrument = (MelodicInstrument*)currentSong->currentClip->output;
-  if (!instrument) {
+  if (!instrument || instrument->type == INSTRUMENT_TYPE_KIT) {
     return ACTION_RESULT_DEALT_WITH;
   }
 
