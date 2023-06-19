@@ -59,11 +59,17 @@ int MultiScreen::padAction(int x, int y, int velocity) {
       OLED::popupText("no clip", true);
       return ACTION_RESULT_DEALT_WITH;
     }
-		ModelStackWithTimelineCounter* modelStackWithTimelineCounter = modelStack->addTimelineCounter(clip);
+    ModelStackWithTimelineCounter* modelStackWithTimelineCounter = modelStack->addTimelineCounter(clip);
 
     int noteRowIndex;
-    ModelStackWithNoteRow* modelStackWithNoteRow = clip->getNoteRowForYNote(x, modelStackWithTimelineCounter);
-		NoteRow* noteRow = modelStackWithNoteRow->getNoteRowAllowNull();
+    if (x > clip->noteRows.getNumElements()) {
+      OLED::popupText("too much row", true);
+      return ACTION_RESULT_DEALT_WITH;
+    }
+    NoteRow* noteRow = clip->noteRows.getElement(x);
+    int noteRowId;
+    if (noteRow) noteRowId = clip->getNoteRowId(noteRow, noteRowIndex);
+    ModelStackWithNoteRow* modelStackWithNoteRow = modelStackWithTimelineCounter->addNoteRow(noteRowId, noteRow);
     if (!noteRow) {
       OLED::popupText("no row", true);
       return ACTION_RESULT_DEALT_WITH;
