@@ -8,6 +8,7 @@
 #include "InstrumentClip.h"
 #include "NoteRow.h"
 #include "ModelStack.h"
+#include "kit.h"
 
 class MultiScreen final : public UI {
 public:
@@ -23,7 +24,6 @@ public:
 };
 
 int MultiScreen::padAction(int x, int y, int velocity) {
-
   if (x >= displayWidth) return ACTION_RESULT_DEALT_WITH;
 
   if (sdRoutineLock && !allowSomeUserActionsEvenWhenInCardRoutine) {
@@ -41,25 +41,46 @@ int MultiScreen::padAction(int x, int y, int velocity) {
   if (y == 0) {
     Output *out = currentSong->firstOutput;
     while (out) {
-      if (out->type != INSTRUMENT_TYPE_KIT) {
-        out = out->next;
+      if (out->type == INSTRUMENT_TYPE_KIT) {
+        break;
       }
+      out = out->next;
     }
+
     if (!out) {
+      OLED::popupText("no out", true);
       return ACTION_RESULT_DEALT_WITH;
     }
+
+    auto kit = (Kit *)out;
     InstrumentClip *clip = (InstrumentClip *)out->activeClip;
+
     if (!clip) {
+      OLED::popupText("no clip", true);
       return ACTION_RESULT_DEALT_WITH;
     }
 		ModelStackWithTimelineCounter* modelStackWithTimelineCounter = modelStack->addTimelineCounter(clip);
 
     int noteRowIndex;
     ModelStackWithNoteRow* modelStackWithNoteRow = clip->getNoteRowForYNote(x, modelStackWithTimelineCounter);
+		NoteRow* noteRow = modelStackWithNoteRow->getNoteRowAllowNull();
+    if (!noteRow) {
+      OLED::popupText("no row", true);
+      return ACTION_RESULT_DEALT_WITH;
+    }
 
-    auto kit = (Kit *)out;
+    Drum* drum = noteRow->drum;
+    if (!drum) {
+      OLED::popupText("no dram", true);
+      return ACTION_RESULT_DEALT_WITH;
+    }
 
-    // .........
+    if (velocity) {
+      kit->beginAuditioningforDrum(modelStackWithNoteRow, drum, 100, zeroMPEValues);
+    } else {
+      kit->endAuditioningForDrum(modelStackWithNoteRow, drum);
+    }
+    return ACTION_RESULT_DEALT_WITH;
   }
 
   auto instrument = (MelodicInstrument*)currentSong->currentClip->output;
@@ -75,7 +96,7 @@ int MultiScreen::padAction(int x, int y, int velocity) {
       if (noteRow->soundingStatus == STATUS_SEQUENCED_NOTE) return ACTION_RESULT_DEALT_WITH;
     }
 
-    int velocityToSound = 40+10*y;
+    int velocityToSound = 16*y;
     instrument->beginAuditioningForNote(modelStack, noteCode, velocityToSound, zeroMPEValues);
   } else {
     instrument->endAuditioningForNote(modelStack, noteCode);
