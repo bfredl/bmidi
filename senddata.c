@@ -85,15 +85,6 @@ int main(int argc, char **argv)
 
   if (!exec) return 0;
 
-  // HAMMERTIME
-  data[2] = 22;
-  data[6] = 0xf7;
-  len = 7;
-  status = snd_rawmidi_write(output, data, len);
-  if (status < 0) {
-    fprintf(stderr, "no write! %s", snd_strerror(status));
-  }
-
   printf("hash ok? ret=yes, ctrl-c=no\n");
   getc(stdin);
 

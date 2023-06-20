@@ -9,7 +9,7 @@ MEMORY
 SECTIONS
 {
 
-.reset scratch_buffer :
+.reset module_data :
 {
   *startup.o (.text)
 } > RAM012L

@@ -9,12 +9,11 @@ CXXFLAGS = $(CFLAGS)
 # NOTE: the -s flag in the build rule for DelugeFirmware-release-oled.elf must be removed!
 # this does not change the content of the final DelugeFirmware-release-oled.bin fine, but keeps the symbol
 # table so we can adress this
-FW_ELF = DelugeFirmware/e2-build-release-oled/DelugeFirmware-release-oled.elf
-
+FW_ELF = DelugeFirmware/dbt-build-debug-oled/Deluge-debug-oled.elf
 CC = arm-none-eabi-gcc
 CXX = arm-none-eabi-g++
 
-all: chainload.bin symbolic.bin
+all: chainload.bin symbolic.bin multiscreen.bin
 
 # myyyyyy precious
 .PRECIOUS: %.elf %.o %.bin
