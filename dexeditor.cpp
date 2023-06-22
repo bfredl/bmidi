@@ -32,6 +32,12 @@ public:
 };
 
 int Dx7UI::padAction(int x, int y, int on) {
+  if (x == displayWidth && on && y > 1) {
+    int op = 8-y-1; // op 0-5
+    char* val = &Dexed::dummy_controller.opSwitch[op];
+    *val = (*val == '0' ? '1' : '0');
+  }
+
   if (x >= displayWidth) return ACTION_RESULT_DEALT_WITH;
 
 		int result = potentialShortcutPadAction(x, y, on);
@@ -66,9 +72,12 @@ int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
     }
     param = 21*op+ip;
     editing = true;
-    renderUIsForOled();
+  } else  if (y==0 && x < 10) {
+    param = 6*21+x;
+    editing = true;
   }
 
+  renderUIsForOled();
   return ACTION_RESULT_DEALT_WITH;
 }
 
@@ -88,11 +97,18 @@ void Dx7UI::selectEncoderAction(int8_t offset) {
 #if HAVE_OLED
 
 const char *desc[] = {
-  "rate1", "rate2", "rate3", "rate4",
-  "level1", "level2", "level3", "level4",
+  "env rate1", "env rate2", "env rate3", "env rate4",
+  "env level1", "env level2", "env level3", "env level4",
   "sc1", "sc2", "sc3", "sc4", "sc5", "rate_scale", "ampmod", "velocity sens",
   "level", "mode", "coarse", "fine", "detune"
 };
+
+const char *desc_global[] {
+  "pitch rate1", "pitch rate2", "pitch rate3", "pitch rate4",
+  "pitch level1", "pitch level2", "pitch level3", "pitch level4",
+  "algoritm", "feedback",
+};
+
 void Dx7UI::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
   if (editing) {
     char buffer[12];
@@ -112,7 +128,8 @@ void Dx7UI::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
     OLED::drawString(buffer, 4*TEXT_SPACING_X, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
 
     OLED::drawString(desc[idx], 8*TEXT_SPACING_X, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-     
+    } else if (param < 6*21+10) {
+    OLED::drawString(desc_global[param-6*21], 4*TEXT_SPACING_X, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
     }
 
   Dx7Patch &p = Dexed::globalPatch;
