@@ -20,6 +20,9 @@ public:
   int buttonAction(int x, int y, bool on, bool inCardRoutine);
 	void selectEncoderAction(int8_t offset);
 
+
+	bool renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + sideBarWidth][3],
+	                   uint8_t occupancyMask[][displayWidth + sideBarWidth]);
 #if HAVE_OLED
   void renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]);
 #endif
@@ -36,6 +39,7 @@ int Dx7UI::padAction(int x, int y, int on) {
     int op = 8-y-1; // op 0-5
     char* val = &Dexed::dummy_controller.opSwitch[op];
     *val = (*val == '0' ? '1' : '0');
+    uiNeedsRendering(this, 0x00000000, 0xFFFFFFFF);
   }
 
   if (x >= displayWidth) return ACTION_RESULT_DEALT_WITH;
@@ -108,6 +112,36 @@ const char *desc_global[] {
   "pitch level1", "pitch level2", "pitch level3", "pitch level4",
   "algoritm", "feedback",
 };
+
+
+bool Dx7UI::renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + sideBarWidth][3],
+                                       uint8_t occupancyMask[][displayWidth + sideBarWidth]) {
+	if (!image) return true;
+
+	for (int i = 0; i < displayHeight; i++) {
+		if (whichRows & (1 << i)) {
+      uint8_t* thisColour = image[i][displayWidth];
+      int op = 8-i-1; // op 0-5
+
+      bool muted = false;
+      if (op < 6) {
+        char* val = &Dexed::dummy_controller.opSwitch[op];
+        muted = (*val == '0');
+      }
+
+      if (muted) {
+        thisColour[0] = 255;
+      } else {
+        thisColour[0] = 0;
+      }
+      thisColour[1] = 0;
+      thisColour[2] = 0;
+		}
+	}
+
+	return true;
+}
+
 
 void Dx7UI::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
   if (editing) {
