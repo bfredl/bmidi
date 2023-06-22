@@ -46,7 +46,7 @@ int Dx7UI::padAction(int x, int y, int on) {
     int op = 8-y-1; // op 0-5
     char* val = &Dexed::dummy_controller.opSwitch[op];
     *val = (*val == '0' ? '1' : '0');
-    uiNeedsRendering(this, 0x00000000, 0xFFFFFFFF);
+    uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
   }
 
   if (x >= displayWidth) return ACTION_RESULT_DEALT_WITH;
@@ -78,7 +78,7 @@ int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
     int ip = 0;
     if (x < 8) {
       ip = x;
-    } else if (x < 15) {
+    } else if (x < 13) {
       ip = (x-8)+16;
     }
     param = 21*op+ip;
@@ -120,6 +120,12 @@ const char *desc_global[] {
   "algoritm", "feedback",
 };
 
+// change the coleur
+void color(uint8_t *colour, int r, int g, int b) {
+  colour[0] = r;
+  colour[1] = g;
+  colour[2] = b;
+}
 
 bool Dx7UI::renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + sideBarWidth][3],
                                        uint8_t occupancyMask[][displayWidth + sideBarWidth]) {
@@ -133,16 +139,14 @@ bool Dx7UI::renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + sid
     bool muted = false;
     if (op < 6) {
       char* val = &Dexed::dummy_controller.opSwitch[op];
-      muted = (*val == '0');
-    }
-
-    if (muted) {
-      thisColour[0] = 255;
+      if (*val == '0') {
+        color(thisColour, 255, 0, 0);
+      } else {
+        color(thisColour, 0, 255, 0);
+      }
     } else {
-      thisColour[0] = 0;
+        color(thisColour, 0, 0, 0);
     }
-    thisColour[1] = 0;
-    thisColour[2] = 0;
 	}
 
 	return true;
@@ -155,42 +159,31 @@ bool Dx7UI::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth + si
 
 	for (int i = 0; i < displayHeight; i++) {
 		if (!(whichRows & (1 << i))) continue;
-    for (int x = 0; x < 16; x++) {
-      image[i][x][0] = 0;
-      image[i][x][1] = 0;
-      image[i][x][2] = 0;
-    }
+    memset(image[i], 0, 3*16);
     int op = 8-i-1; // op 0-5
     if (op < 6) {
+      char* val = &Dexed::dummy_controller.opSwitch[op];
       for (int x = 0; x < 4; x++) {
-        image[i][x][0] = 0;
-        image[i][x][1] = 200;
-        image[i][x][2] = 0;
-        image[i][x+4][0] = 0;
-        image[i][x+4][1] = 100;
-        image[i][x+4][2] = 200;
+        color(image[i][x], 0, 200, 0);
+        color(image[i][x+4], 0, 100, 200);
       }
-      image[i][8][0] = 80;
-      image[i][8][1] = 80;
-      image[i][8][2] = 80;
+      color(image[i][8], 80, 80, 80);
       for (int x = 0; x < 3; x++) {
-        image[i][x+10][0] = 200;
-        image[i][x+10][1] = 0;
-        image[i][x+10][2] = 200;
+        color(image[i][x+10], 200, 0, 200);
+      }
+      if (*val == '0') {
+        for (int x = 0; x < 16; x++) {
+          for (int c = 0; c < 16; c++) {
+            image[i][x][c] >>= 1;
+          }
+        }
       }
     } else if (i == 0) {
       for (int x = 0; x < 4; x++) {
-        image[i][x][0] = 100;
-        image[i][x][1] = 200;
-        image[i][x][2] = 0;
-        image[i][x+4][0] = 0;
-        image[i][x+4][1] = 100;
-        image[i][x+4][2] = 100;
+        color(image[i][x], 40, 240, 40);
+        color(image[i][x+4], 40, 140, 240);
       }
-      image[i][8][0] = 255;
-      image[i][8][1] = 0;
-      image[i][8][2] = 0;
-
+      color(image[i][8], 255, 0, 0);
     } else if (i == 1) {
     }
 
