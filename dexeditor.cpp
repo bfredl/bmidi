@@ -16,11 +16,14 @@
 class Dx7UI final : public UI {
 public:
   Dx7UI() {};
+	void focusRegained();
   int padAction(int x, int y, int velocity);
   int buttonAction(int x, int y, bool on, bool inCardRoutine);
 	void selectEncoderAction(int8_t offset);
 
 
+	bool renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth + sideBarWidth][3],
+	                    uint8_t occupancyMask[][displayWidth + sideBarWidth], bool drawUndefinedArea = false);
 	bool renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + sideBarWidth][3],
 	                   uint8_t occupancyMask[][displayWidth + sideBarWidth]);
 #if HAVE_OLED
@@ -33,6 +36,10 @@ public:
   bool editing = false;
   int param = 0;
 };
+
+void Dx7UI::focusRegained() {
+    uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
+}
 
 int Dx7UI::padAction(int x, int y, int on) {
   if (x == displayWidth && on && y > 1) {
@@ -119,26 +126,75 @@ bool Dx7UI::renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + sid
 	if (!image) return true;
 
 	for (int i = 0; i < displayHeight; i++) {
-		if (whichRows & (1 << i)) {
-      uint8_t* thisColour = image[i][displayWidth];
-      int op = 8-i-1; // op 0-5
+		if (!(whichRows & (1 << i))) continue;
+    uint8_t* thisColour = image[i][displayWidth];
+    int op = 8-i-1; // op 0-5
 
-      bool muted = false;
-      if (op < 6) {
-        char* val = &Dexed::dummy_controller.opSwitch[op];
-        muted = (*val == '0');
-      }
+    bool muted = false;
+    if (op < 6) {
+      char* val = &Dexed::dummy_controller.opSwitch[op];
+      muted = (*val == '0');
+    }
 
-      if (muted) {
-        thisColour[0] = 255;
-      } else {
-        thisColour[0] = 0;
-      }
-      thisColour[1] = 0;
-      thisColour[2] = 0;
-		}
+    if (muted) {
+      thisColour[0] = 255;
+    } else {
+      thisColour[0] = 0;
+    }
+    thisColour[1] = 0;
+    thisColour[2] = 0;
 	}
 
+	return true;
+}
+
+bool Dx7UI::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth + sideBarWidth][3],
+                                    uint8_t occupancyMask[][displayWidth + sideBarWidth], bool drawUndefinedArea) {
+	if (!image) return true;
+
+
+	for (int i = 0; i < displayHeight; i++) {
+		if (!(whichRows & (1 << i))) continue;
+    for (int x = 0; x < 16; x++) {
+      image[i][x][0] = 0;
+      image[i][x][1] = 0;
+      image[i][x][2] = 0;
+    }
+    int op = 8-i-1; // op 0-5
+    if (op < 6) {
+      for (int x = 0; x < 4; x++) {
+        image[i][x][0] = 0;
+        image[i][x][1] = 200;
+        image[i][x][2] = 0;
+        image[i][x+4][0] = 0;
+        image[i][x+4][1] = 100;
+        image[i][x+4][2] = 200;
+      }
+      image[i][8][0] = 80;
+      image[i][8][1] = 80;
+      image[i][8][2] = 80;
+      for (int x = 0; x < 3; x++) {
+        image[i][x+10][0] = 200;
+        image[i][x+10][1] = 0;
+        image[i][x+10][2] = 200;
+      }
+    } else if (i == 0) {
+      for (int x = 0; x < 4; x++) {
+        image[i][x][0] = 100;
+        image[i][x][1] = 200;
+        image[i][x][2] = 0;
+        image[i][x+4][0] = 0;
+        image[i][x+4][1] = 100;
+        image[i][x+4][2] = 100;
+      }
+      image[i][8][0] = 255;
+      image[i][8][1] = 0;
+      image[i][8][2] = 0;
+
+    } else if (i == 1) {
+    }
+
+  }
 	return true;
 }
 
