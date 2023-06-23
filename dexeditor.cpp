@@ -110,6 +110,7 @@ void Dx7UI::doLoad(int delta) {
     if (!cartValid) return;
   }
   state = kStateLoading;
+  uiTimerManager.unsetTimer(TIMER_SHORTCUT_BLINK);
 
   cartPos += delta;
   if (cartPos < 0) cartPos = 0;
@@ -370,6 +371,7 @@ int Dx7UI::buttonAction(int x, int y, bool on, bool inCardRoutine) {
     }
   } else if (x == clipViewButtonX && y == clipViewButtonY) {
     did_button = true;
+    uiTimerManager.unsetTimer(TIMER_SHORTCUT_BLINK);
     state = kStateNone;
     renderUIsForOled();
   } else if (x == backButtonX && y == backButtonY) {
