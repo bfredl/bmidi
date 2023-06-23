@@ -16,9 +16,9 @@
 #include "dexed/engine.h"
 #include "dexed/PluginData.h"
 
-class Dx7UI final : public UI {
+class Dx7UImod final : public UI {
 public:
-  Dx7UI() {};
+  Dx7UImod() {};
 	void focusRegained();
   int padAction(int x, int y, int velocity);
   int buttonAction(int x, int y, bool on, bool inCardRoutine);
@@ -57,7 +57,7 @@ public:
   char progName[11];
 };
 
-void Dx7UI::openFile() {
+void Dx7UImod::openFile() {
   const char *path = "dx7.syx";
   const int xx = 4104;
 
@@ -103,7 +103,7 @@ free:
   generalMemoryAllocator.dealloc(buffer);
 }
 
-void Dx7UI::doLoad(int delta) {
+void Dx7UImod::doLoad(int delta) {
   if (!patch) return;
   if (!cartValid) {
     openFile();
@@ -121,7 +121,7 @@ void Dx7UI::doLoad(int delta) {
   renderUIsForOled();
 }
 
-void Dx7UI::focusRegained() {
+void Dx7UImod::focusRegained() {
     uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
 
     if (dexedEditedSource) {
@@ -136,7 +136,7 @@ void Dx7UI::focusRegained() {
     }
 }
 
-int Dx7UI::padAction(int x, int y, int on) {
+int Dx7UImod::padAction(int x, int y, int on) {
   if (x == displayWidth && on && y > 1) {
     int op = 8-y-1; // op 0-5
     char* val = &Dexed::dummy_controller.opSwitch[op];
@@ -163,7 +163,7 @@ int Dx7UI::padAction(int x, int y, int on) {
   return ACTION_RESULT_NOT_DEALT_WITH;
 }
 
-int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
+int Dx7UImod::potentialShortcutPadAction(int x, int y, int on) {
   if (!on || x >= displayWidth || !Buttons::isShiftButtonPressed()) {
     return ACTION_RESULT_NOT_DEALT_WITH;
   }
@@ -200,7 +200,7 @@ int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
   return ACTION_RESULT_DEALT_WITH;
 }
 
-void Dx7UI::selectEncoderAction(int8_t offset) {
+void Dx7UImod::selectEncoderAction(int8_t offset) {
   if (patch && state == kStateEditing) {
 
     int newval = patch->currentPatch[param]+offset;
@@ -236,7 +236,7 @@ void color(uint8_t *colour, int r, int g, int b) {
   colour[2] = b;
 }
 
-bool Dx7UI::renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + sideBarWidth][3],
+bool Dx7UImod::renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + sideBarWidth][3],
                                        uint8_t occupancyMask[][displayWidth + sideBarWidth]) {
 	if (!image) return true;
 
@@ -261,7 +261,7 @@ bool Dx7UI::renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + sid
 	return true;
 }
 
-bool Dx7UI::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth + sideBarWidth][3],
+bool Dx7UImod::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth + sideBarWidth][3],
                                     uint8_t occupancyMask[][displayWidth + sideBarWidth], bool drawUndefinedArea) {
 	if (!image) return true;
 
@@ -313,7 +313,7 @@ bool Dx7UI::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth + si
 }
 
 
-void Dx7UI::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
+void Dx7UImod::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
   if (patch && state == kStateEditing) {
     char buffer[12];
     intToString(param, buffer, 3);
@@ -355,7 +355,7 @@ void Dx7UI::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
 }
 #endif
 
-int Dx7UI::buttonAction(int x, int y, bool on, bool inCardRoutine) {
+int Dx7UImod::buttonAction(int x, int y, bool on, bool inCardRoutine) {
   if (on && loadPending) {
     if (x == loadButtonX && y == loadButtonY) {
       loadPending = false;
@@ -380,85 +380,10 @@ int Dx7UI::buttonAction(int x, int y, bool on, bool inCardRoutine) {
   return ACTION_RESULT_DEALT_WITH;
 }
 
-static Dx7UI dx7ui;
+static Dx7UImod dx7ui;
 
 extern void mod_main(int*,int*) {
-  new (&dx7ui) Dx7UI;
+  new (&dx7ui) Dx7UImod;
   dexedUI = &dx7ui;
 }
 
-// BLUFF: delete theese as soon as we have loading in firmware
-
-char normparm(char value, char max, int id) {
-    if ( value <= max && value >= 0 )
-        return value;
-
-    // if this is beyond the max, we expect a 0-255 range, normalize this
-    // to the expected return value; and this value as a random data.
-
-    value = abs(value);
-
-    char v = ((float)value)/255 * max;
-
-    return v;
-}
-void Cartridge::unpackProgram(uint8_t *unpackPgm, int idx) {
-    // TODO put this in uint8_t :D
-    char *bulk = (char *)voiceData + 6 + (idx * 128);
-
-    for (int op = 0; op < 6; op++) {
-        // eg rate and level, brk pt, depth, scaling
-
-        for(int i=0; i<11; i++) {
-            uint8_t currparm = bulk[op * 17 + i] & 0x7F; // mask BIT7 (don't care per sysex spec)
-            unpackPgm[op * 21 + i] = normparm(currparm, 99, i);
-        }
-
-        memcpy(unpackPgm + op * 21, bulk + op * 17, 11);
-        char leftrightcurves = bulk[op * 17 + 11]&0xF; // bits 4-7 don't care per sysex spec
-        unpackPgm[op * 21 + 11] = leftrightcurves & 3;
-        unpackPgm[op * 21 + 12] = (leftrightcurves >> 2) & 3;
-        char detune_rs = bulk[op * 17 + 12]&0x7F;
-        unpackPgm[op * 21 + 13] = detune_rs & 7;
-        char kvs_ams = bulk[op * 17 + 13]&0x1F; // bits 5-7 don't care per sysex spec
-        unpackPgm[op * 21 + 14] = kvs_ams & 3;
-        unpackPgm[op * 21 + 15] = (kvs_ams >> 2) & 7;
-        unpackPgm[op * 21 + 16] = bulk[op * 17 + 14]&0x7F;  // output level
-        char fcoarse_mode = bulk[op * 17 + 15]&0x3F; //bits 6-7 don't care per sysex spec
-        unpackPgm[op * 21 + 17] = fcoarse_mode & 1;
-        unpackPgm[op * 21 + 18] = (fcoarse_mode >> 1)&0x1F;
-        unpackPgm[op * 21 + 19] = bulk[op * 17 + 16]&0x7F;  // fine freq
-        unpackPgm[op * 21 + 20] = (detune_rs >> 3) &0x7F;
-    }
-
-    for (int i=0; i<8; i++)  {
-        uint8_t currparm = bulk[102 + i] & 0x7F; // mask BIT7 (don't care per sysex spec)
-        unpackPgm[126+i] = normparm(currparm, 99, 126+i);
-    }
-    unpackPgm[134] = normparm(bulk[110]&0x1F, 31, 134); // bits 5-7 are don't care per sysex spec
-
-    char oks_fb = bulk[111]&0xF;//bits 4-7 are don't care per spec
-    unpackPgm[135] = oks_fb & 7;
-    unpackPgm[136] = oks_fb >> 3;
-    unpackPgm[137] = bulk[112] & 0x7F; // lfs
-    unpackPgm[138] = bulk[113] & 0x7F; // lfd
-    unpackPgm[139] = bulk[114] & 0x7F; // lpmd
-    unpackPgm[140] = bulk[115] & 0x7F; // lamd
-    char lpms_lfw_lks = bulk[116] & 0x7F;
-    unpackPgm[141] = lpms_lfw_lks & 1;
-    unpackPgm[142] = (lpms_lfw_lks >> 1) & 7;
-    unpackPgm[143] = lpms_lfw_lks >> 4;
-    unpackPgm[144] = bulk[117] & 0x7F;
-    for (int name_idx = 0; name_idx < 10; name_idx++) {
-        unpackPgm[145 + name_idx] = bulk[118 + name_idx] & 0x7F;
-    } //name_idx
-//    memcpy(unpackPgm + 144, bulk + 117, 11);  // transpose, name
-}
-
-uint8_t sysexChecksum(const uint8_t *sysex, int size) {
-    int sum = 0;
-    int i;
-
-    for (i = 0; i < size; sum -= sysex[i++]);
-    return sum & 0x7F;
-}
