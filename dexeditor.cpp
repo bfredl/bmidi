@@ -13,6 +13,7 @@
 #include "Buttons.h"
 #include "GeneralMemoryAllocator.h"
 #include "dexed/engine.h"
+#include "dexed/PluginData.h"
 
 class Dx7UI final : public UI {
 public:
@@ -31,13 +32,92 @@ public:
   void renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]);
 #endif
 
+  void openFile();
+  void doLoad(int delta);
+
   int potentialShortcutPadAction(int x, int y, int on);
 
   bool did_button = false;
-  bool editing = false;
+  enum State {
+    kStateNone,
+    kStateEditing,
+    kStateLoading,
+  };
+  State state = kStateNone;
   int param = 0;
   Dx7Patch *patch;
+
+  // TODO: this is huge, use alloc
+  Cartridge cart;
+  bool cartValid = false;
+  int cartPos = 0;
+
+  bool loadPending = false;
+  char progName[11];
 };
+
+void Dx7UI::openFile() {
+  const char *path = "dx7.syx";
+  const int xx = 4104;
+
+  FILINFO fno;
+  int result = f_stat(path, &fno);
+  FSIZE_t fileSize = fno.fsize;
+  if (fileSize < xx) {
+    OLED::popupText("too small!", true);
+  }
+
+  FIL currentFile;
+  // Open the file
+  result = f_open(&currentFile, path, FA_READ);
+  if (result != FR_OK) {
+    OLED::popupText("read error 1", true);
+    return;
+  }
+
+  int status;
+  UINT numBytesRead;
+  int readsize = min((int)fileSize, 8192);
+  uint8_t* buffer = (uint8_t*)generalMemoryAllocator.alloc(readsize, NULL, false, true);
+  if (!buffer) {
+    OLED::popupText("out of memory", true);
+    return;
+  }
+  result = f_read(&currentFile, buffer, fileSize, &numBytesRead);
+  if (numBytesRead < xx) {
+    OLED::popupText("read error 2", true);
+    goto free;
+  }
+
+  status = cart.load(buffer, numBytesRead);
+  if (status) {
+    OLED::popupText("load error", true);
+    goto free;
+  }
+
+  cartValid = true;
+  cartPos = 0;
+
+free:
+  generalMemoryAllocator.dealloc(buffer);
+}
+
+void Dx7UI::doLoad(int delta) {
+  if (!patch) return;
+  if (!cartValid) {
+    openFile();
+    if (!cartValid) return;
+  }
+  state = kStateLoading;
+
+  cartPos += delta;
+  if (cartPos < 0) cartPos = 0;
+  if (cartPos >= 32) cartPos = 31;
+
+  cart.unpackProgram(patch->currentPatch, cartPos);
+  Cartridge::normalizePgmName(progName, (const char *)&patch->currentPatch[145]);
+  renderUIsForOled();
+}
 
 void Dx7UI::focusRegained() {
     uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
@@ -95,10 +175,12 @@ int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
       ip = (x-8)+16;
     }
     param = 21*op+ip;
-    editing = true;
+    state = kStateEditing;
+    loadPending = false;
   } else  if (y==0 && x < 10) {
     param = 6*21+x;
-    editing = true;
+    state = kStateEditing;
+    loadPending = false;
   }
 
   renderUIsForOled();
@@ -106,13 +188,16 @@ int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
 }
 
 void Dx7UI::selectEncoderAction(int8_t offset) {
-  if (!editing || !patch) return;
+  if (patch && state == kStateEditing) {
 
-  int newval = patch->currentPatch[param]+offset;
-  if (newval > 127) newval = 127;
-  if (newval < 0) newval = 0;
-  patch->currentPatch[param] = newval;
-  renderUIsForOled();
+    int newval = patch->currentPatch[param]+offset;
+    if (newval > 127) newval = 127;
+    if (newval < 0) newval = 0;
+    patch->currentPatch[param] = newval;
+    renderUIsForOled();
+  } else if (state == kStateLoading) {
+    doLoad(offset);
+  }
 
 }
 
@@ -204,7 +289,7 @@ bool Dx7UI::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth + si
 
 
 void Dx7UI::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
-  if (editing && patch) {
+  if (patch && state == kStateEditing) {
     char buffer[12];
     intToString(param, buffer, 3);
     OLED::drawString(buffer, 0, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
@@ -226,9 +311,18 @@ void Dx7UI::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
     OLED::drawString(desc_global[param-6*21], 4*TEXT_SPACING_X, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
     }
 
-  int val = patch->currentPatch[param];
+    int val = patch->currentPatch[param];
+    if (param == 6*21+8) {
+      val += 1; // algorithms start at one
+    }
     intToString(val, buffer, 3);
     OLED::drawString(buffer, 0, 5+TEXT_SIZE_Y_UPDATED+2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+  } else if (state == kStateLoading) {
+    char buffer[12];
+    intToString(cartPos+1, buffer, 3);
+    OLED::drawString(buffer, 0, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+    progName[10] = 0; // just checking
+    OLED::drawString(progName, 0, 5+TEXT_SIZE_Y_UPDATED+2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
   } else {
     const char *text = did_button ? "buton" : "Halloj";
     OLED::drawString(text, 0, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
@@ -237,11 +331,23 @@ void Dx7UI::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
 #endif
 
 int Dx7UI::buttonAction(int x, int y, bool on, bool inCardRoutine) {
-  if (x == clipViewButtonX && y == clipViewButtonY) {
+  if (on && loadPending) {
+    if (x == loadButtonX && y == loadButtonY) {
+      loadPending = false;
+      doLoad(0);
+      return ACTION_RESULT_DEALT_WITH;
+    }
+  }
+
+  if (x == loadButtonX && y == loadButtonY && on) {
+    if (state != kStateLoading) {
+      OLED::popupText("overwrite? press again", false);
+      loadPending = true;
+    }
+  } else if (x == clipViewButtonX && y == clipViewButtonY) {
     did_button = true;
-    editing = false;
+    state = kStateNone;
     renderUIsForOled();
-    return ACTION_RESULT_DEALT_WITH;
   } else if (x == backButtonX && y == backButtonY) {
     close();
   }
@@ -253,4 +359,80 @@ static Dx7UI dx7ui;
 extern void mod_main(int*,int*) {
   new (&dx7ui) Dx7UI;
   dexedUI = &dx7ui;
+}
+
+// BLUFF: delete theese as soon as we have loading in firmware
+
+char normparm(char value, char max, int id) {
+    if ( value <= max && value >= 0 )
+        return value;
+
+    // if this is beyond the max, we expect a 0-255 range, normalize this
+    // to the expected return value; and this value as a random data.
+
+    value = abs(value);
+
+    char v = ((float)value)/255 * max;
+
+    return v;
+}
+void Cartridge::unpackProgram(uint8_t *unpackPgm, int idx) {
+    // TODO put this in uint8_t :D
+    char *bulk = (char *)voiceData + 6 + (idx * 128);
+
+    for (int op = 0; op < 6; op++) {
+        // eg rate and level, brk pt, depth, scaling
+
+        for(int i=0; i<11; i++) {
+            uint8_t currparm = bulk[op * 17 + i] & 0x7F; // mask BIT7 (don't care per sysex spec)
+            unpackPgm[op * 21 + i] = normparm(currparm, 99, i);
+        }
+
+        memcpy(unpackPgm + op * 21, bulk + op * 17, 11);
+        char leftrightcurves = bulk[op * 17 + 11]&0xF; // bits 4-7 don't care per sysex spec
+        unpackPgm[op * 21 + 11] = leftrightcurves & 3;
+        unpackPgm[op * 21 + 12] = (leftrightcurves >> 2) & 3;
+        char detune_rs = bulk[op * 17 + 12]&0x7F;
+        unpackPgm[op * 21 + 13] = detune_rs & 7;
+        char kvs_ams = bulk[op * 17 + 13]&0x1F; // bits 5-7 don't care per sysex spec
+        unpackPgm[op * 21 + 14] = kvs_ams & 3;
+        unpackPgm[op * 21 + 15] = (kvs_ams >> 2) & 7;
+        unpackPgm[op * 21 + 16] = bulk[op * 17 + 14]&0x7F;  // output level
+        char fcoarse_mode = bulk[op * 17 + 15]&0x3F; //bits 6-7 don't care per sysex spec
+        unpackPgm[op * 21 + 17] = fcoarse_mode & 1;
+        unpackPgm[op * 21 + 18] = (fcoarse_mode >> 1)&0x1F;
+        unpackPgm[op * 21 + 19] = bulk[op * 17 + 16]&0x7F;  // fine freq
+        unpackPgm[op * 21 + 20] = (detune_rs >> 3) &0x7F;
+    }
+
+    for (int i=0; i<8; i++)  {
+        uint8_t currparm = bulk[102 + i] & 0x7F; // mask BIT7 (don't care per sysex spec)
+        unpackPgm[126+i] = normparm(currparm, 99, 126+i);
+    }
+    unpackPgm[134] = normparm(bulk[110]&0x1F, 31, 134); // bits 5-7 are don't care per sysex spec
+
+    char oks_fb = bulk[111]&0xF;//bits 4-7 are don't care per spec
+    unpackPgm[135] = oks_fb & 7;
+    unpackPgm[136] = oks_fb >> 3;
+    unpackPgm[137] = bulk[112] & 0x7F; // lfs
+    unpackPgm[138] = bulk[113] & 0x7F; // lfd
+    unpackPgm[139] = bulk[114] & 0x7F; // lpmd
+    unpackPgm[140] = bulk[115] & 0x7F; // lamd
+    char lpms_lfw_lks = bulk[116] & 0x7F;
+    unpackPgm[141] = lpms_lfw_lks & 1;
+    unpackPgm[142] = (lpms_lfw_lks >> 1) & 7;
+    unpackPgm[143] = lpms_lfw_lks >> 4;
+    unpackPgm[144] = bulk[117] & 0x7F;
+    for (int name_idx = 0; name_idx < 10; name_idx++) {
+        unpackPgm[145 + name_idx] = bulk[118 + name_idx] & 0x7F;
+    } //name_idx
+//    memcpy(unpackPgm + 144, bulk + 117, 11);  // transpose, name
+}
+
+uint8_t sysexChecksum(const uint8_t *sysex, int size) {
+    int sum = 0;
+    int i;
+
+    for (i = 0; i < size; sum -= sysex[i++]);
+    return sum & 0x7F;
 }
