@@ -12,6 +12,7 @@
 #include "KeyboardScreen.h"
 #include "Buttons.h"
 #include "GeneralMemoryAllocator.h"
+#include "uitimermanager.h"
 #include "dexed/engine.h"
 #include "dexed/PluginData.h"
 
@@ -166,6 +167,8 @@ int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
     return ACTION_RESULT_NOT_DEALT_WITH;
   }
 
+  state = kStateNone;
+
   if (y > 1) {
     int op = 8-y-1; // op 0-5
     int ip = 0;
@@ -178,11 +181,17 @@ int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
     }
     param = 21*op+ip;
     state = kStateEditing;
-    loadPending = false;
   } else  if (y==0 && x < 10) {
     param = 6*21+x;
     state = kStateEditing;
+  }
+
+  if (state == kStateEditing) {
     loadPending = false;
+    soundEditor.setupShortcutBlink(x, y, 1);
+    soundEditor.blinkShortcut();
+  } else {
+    uiTimerManager.unsetTimer(TIMER_SHORTCUT_BLINK);
   }
 
   renderUIsForOled();
