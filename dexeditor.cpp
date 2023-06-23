@@ -11,6 +11,7 @@
 #include "kit.h"
 #include "KeyboardScreen.h"
 #include "Buttons.h"
+#include "GeneralMemoryAllocator.h"
 #include "dexed/engine.h"
 
 class Dx7UI final : public UI {
@@ -35,10 +36,22 @@ public:
   bool did_button = false;
   bool editing = false;
   int param = 0;
+  Dx7Patch *patch;
 };
 
 void Dx7UI::focusRegained() {
     uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
+
+    if (dexedEditedSource) {
+      if (dexedEditedSource->dx7Patch == NULL) {
+        void* memory = generalMemoryAllocator.alloc(sizeof(Dx7Patch), NULL, false, true);
+        dexedEditedSource->dx7Patch = new(memory) Dx7Patch;
+        memcpy(dexedEditedSource->dx7Patch->currentPatch, Dexed::globalPatch.currentPatch, sizeof Dexed::globalPatch.currentPatch);
+      }
+      patch = dexedEditedSource->dx7Patch;
+    } else {
+      patch = NULL;
+    }
 }
 
 int Dx7UI::padAction(int x, int y, int on) {
@@ -93,14 +106,12 @@ int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
 }
 
 void Dx7UI::selectEncoderAction(int8_t offset) {
-  if (!editing) return;
+  if (!editing || !patch) return;
 
-  Dx7Patch &p = Dexed::globalPatch;
-  int newval = p.currentPatch[param]+offset;
+  int newval = patch->currentPatch[param]+offset;
   if (newval > 127) newval = 127;
   if (newval < 0) newval = 0;
-  p.currentPatch[param] = newval;
-  p.update(p.currentPatch);
+  patch->currentPatch[param] = newval;
   renderUIsForOled();
 
 }
@@ -193,7 +204,7 @@ bool Dx7UI::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth + si
 
 
 void Dx7UI::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
-  if (editing) {
+  if (editing && patch) {
     char buffer[12];
     intToString(param, buffer, 3);
     OLED::drawString(buffer, 0, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
@@ -215,8 +226,7 @@ void Dx7UI::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
     OLED::drawString(desc_global[param-6*21], 4*TEXT_SPACING_X, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
     }
 
-  Dx7Patch &p = Dexed::globalPatch;
-  int val = p.currentPatch[param];
+  int val = patch->currentPatch[param];
     intToString(val, buffer, 3);
     OLED::drawString(buffer, 0, 5+TEXT_SIZE_Y_UPDATED+2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
   } else {
@@ -242,8 +252,5 @@ static Dx7UI dx7ui;
 
 extern void mod_main(int*,int*) {
   new (&dx7ui) Dx7UI;
-  // This (with RootUI parent class) doesn't work
-  // changeRootUI(&dx7ui);
-
-  openUI(&dx7ui);
+  dexedUI = &dx7ui;
 }
