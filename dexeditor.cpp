@@ -47,11 +47,13 @@ public:
   State state = kStateNone;
   int param = 0;
   Dx7Patch *patch;
+  bool isScale;
 
   // TODO: this is huge, use alloc
   Cartridge cart;
   bool cartValid = false;
   int cartPos = 0;
+  int uplim = 127;
 
   bool loadPending = false;
   char progName[11];
@@ -169,11 +171,14 @@ int Dx7UImod::potentialShortcutPadAction(int x, int y, int on) {
   }
 
   state = kStateNone;
+  uplim = 127;
 
   if (y > 1) {
     int op = 8-y-1; // op 0-5
     int ip = 0;
-    if (x < 8) {
+    if (isScale && x < 5) {
+      ip = 8+x;
+    } else if (x < 8) {
       ip = x;
     } else if (x < 13) {
       ip = (x-8)+16;
@@ -182,9 +187,16 @@ int Dx7UImod::potentialShortcutPadAction(int x, int y, int on) {
     }
     param = 21*op+ip;
     state = kStateEditing;
+    if (ip == 17) {
+      uplim = 1;
+    } else if (ip == 11 || ip == 12) {
+      uplim = 3;
+    }
   } else  if (y==0 && x < 10) {
     param = 6*21+x;
     state = kStateEditing;
+  } else if (y == 1) {
+    if (x == 0) isScale = !isScale;
   }
 
   if (state == kStateEditing) {
@@ -204,7 +216,7 @@ void Dx7UImod::selectEncoderAction(int8_t offset) {
   if (patch && state == kStateEditing) {
 
     int newval = patch->currentPatch[param]+offset;
-    if (newval > 127) newval = 127;
+    if (newval > uplim) newval = uplim;
     if (newval < 0) newval = 0;
     patch->currentPatch[param] = newval;
     renderUIsForOled();
@@ -219,7 +231,8 @@ void Dx7UImod::selectEncoderAction(int8_t offset) {
 const char *desc[] = {
   "env rate1", "env rate2", "env rate3", "env rate4",
   "env level1", "env level2", "env level3", "env level4",
-  "sc1", "sc2", "sc3", "sc4", "sc5", "rate scale", "ampmod", "velocity sens",
+  "breakpoint", "left depth", "right depth", "left curve", "right curve",
+  "rate scale", "ampmod", "velocity sens",
   "level", "mode", "coarse", "fine", "detune"
 };
 
@@ -228,6 +241,8 @@ const char *desc_global[] {
   "pitch level1", "pitch level2", "pitch level3", "pitch level4",
   "algoritm", "feedback",
 };
+
+const char *curves[] {"lin-", "exp-", "exp+", "lin+", "?????"};
 
 // change the coleur
 void color(uint8_t *colour, int r, int g, int b) {
@@ -280,6 +295,11 @@ bool Dx7UImod::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth +
         color(image[i][x], 0, 120, 0);
         color(image[i][x+4], 0, 40, 110);
       }
+      if (isScale) {
+        for (int x = 0; x < 5; x++) {
+          color(image[i][x], 100, 150, 0);
+        }
+      }
       color(image[i][8], 70, 70, 70);
       for (int x = 0; x < 3; x++) {
         color(image[i][x+10], 150, 0, 150);
@@ -305,7 +325,13 @@ bool Dx7UImod::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth +
         color(image[i][x+4], 40, 140, 240);
       }
       color(image[i][8], 255, 0, 0);
+      color(image[i][9], 100, 100, 100);
     } else if (i == 1) {
+      if(isScale) {
+        color(image[i][0], 0, 120, 0);
+      } else {
+        color(image[i][0], 100, 150, 0);
+      }
     }
 
   }
@@ -319,9 +345,9 @@ void Dx7UImod::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
     intToString(param, buffer, 3);
     OLED::drawString(buffer, 0, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
 
+    int op = param/21;
+    int idx = param%21;
     if (param < 6*21) {
-      int op = param/21;
-      int idx = param%21;
 
       buffer[0] = 'o';
       buffer[1] = 'p';
@@ -340,8 +366,19 @@ void Dx7UImod::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
     if (param == 6*21+8) {
       val += 1; // algorithms start at one
     }
+    int ybel = 5+TEXT_SIZE_Y_UPDATED+2;
     intToString(val, buffer, 3);
-    OLED::drawString(buffer, 0, 5+TEXT_SIZE_Y_UPDATED+2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+    OLED::drawString(buffer, 0, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+
+    const char *extra = "";
+    if (param < 6*21 && (idx == 11 || idx == 12)) {
+      int kurva = min(val,4);
+      extra = curves[kurva];
+    } else if (param < 6*21 && (idx == 17)) {;
+      extra = val ? "fixed" : "keyboard";
+    }
+    OLED::drawString(extra, 4*TEXT_SPACING_X, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+
   } else if (state == kStateLoading) {
     char buffer[12];
     intToString(cartPos+1, buffer, 3);
