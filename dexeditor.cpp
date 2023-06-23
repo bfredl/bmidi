@@ -173,6 +173,8 @@ int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
       ip = x;
     } else if (x < 13) {
       ip = (x-8)+16;
+    } else if (x < 16) {
+      ip = (x-13)+13;
     }
     param = 21*op+ip;
     state = kStateEditing;
@@ -184,6 +186,7 @@ int Dx7UI::potentialShortcutPadAction(int x, int y, int on) {
   }
 
   renderUIsForOled();
+  uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
   return ACTION_RESULT_DEALT_WITH;
 }
 
@@ -206,7 +209,7 @@ void Dx7UI::selectEncoderAction(int8_t offset) {
 const char *desc[] = {
   "env rate1", "env rate2", "env rate3", "env rate4",
   "env level1", "env level2", "env level3", "env level4",
-  "sc1", "sc2", "sc3", "sc4", "sc5", "rate_scale", "ampmod", "velocity sens",
+  "sc1", "sc2", "sc3", "sc4", "sc5", "rate scale", "ampmod", "velocity sens",
   "level", "mode", "coarse", "fine", "detune"
 };
 
@@ -252,6 +255,10 @@ bool Dx7UI::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth + si
                                     uint8_t occupancyMask[][displayWidth + sideBarWidth], bool drawUndefinedArea) {
 	if (!image) return true;
 
+  int editedOp = -1;
+  if (state == kStateEditing && param < 6*21) {
+    editedOp = param/21;
+  }
 
 	for (int i = 0; i < displayHeight; i++) {
 		if (!(whichRows & (1 << i))) continue;
@@ -260,17 +267,25 @@ bool Dx7UI::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth + si
     if (op < 6) {
       char* val = &Dexed::dummy_controller.opSwitch[op];
       for (int x = 0; x < 4; x++) {
-        color(image[i][x], 0, 200, 0);
-        color(image[i][x+4], 0, 100, 200);
+        color(image[i][x], 0, 120, 0);
+        color(image[i][x+4], 0, 40, 110);
       }
-      color(image[i][8], 80, 80, 80);
+      color(image[i][8], 70, 70, 70);
       for (int x = 0; x < 3; x++) {
-        color(image[i][x+10], 200, 0, 200);
+        color(image[i][x+10], 150, 0, 150);
       }
+      color(image[i][15], 150, 125, 0);
       if (*val == '0') {
         for (int x = 0; x < 16; x++) {
           for (int c = 0; c < 16; c++) {
-            image[i][x][c] >>= 1;
+            image[i][x][c] = (image[i][x][c] >> 1) + (image[i][x][c] >> 2);
+          }
+        }
+      } else if (op == editedOp) {
+        for (int x = 0; x < 16; x++) {
+          for (int c = 0; c < 3; c++) {
+            image[i][x][c] = image[i][x][c] + (image[i][x][c] >> 2);
+            if (image[i][x][c] < 30) image[i][x][c] = 30;
           }
         }
       }
