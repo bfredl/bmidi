@@ -174,9 +174,9 @@ int Dx7UImod::potentialShortcutPadAction(int x, int y, int on) {
   }
 
   state = kStateNone;
-  uplim = 127;
 
   if (y > 1) {
+    uplim = 99;
     int op = 8-y-1; // op 0-5
     int ip = 0;
     if (isScale && x < 5) {
@@ -194,10 +194,21 @@ int Dx7UImod::potentialShortcutPadAction(int x, int y, int on) {
       uplim = 1;
     } else if (ip == 11 || ip == 12) {
       uplim = 3;
+    } else if (ip == 13 || ip == 15) {
+      uplim = 7;
+    } else if (ip == 14) {
+      uplim = 3;
+    } else if (ip == 20) {
+      uplim = 14;
     }
   } else  if (y==0 && x < 10) {
     param = 6*21+x;
     state = kStateEditing;
+    if (x < 8) {
+      uplim = 99;
+    } else if (x == 9) {
+      uplim = 7;
+    }
   } else if (y == 1) {
     if (x == 0) isScale = !isScale;
   }
@@ -409,17 +420,17 @@ void Dx7UImod::renderEnvelope(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, i
   int ybel2 = ybel+(TEXT_SIZE_Y_UPDATED+2);
   for (int i = 0; i < 4; i++) {
     int val = patch->currentPatch[op*21+i];
-    intToString(val, buffer, 3);
-    int xpos = 10+i*4*TEXT_SPACING_X;
+    intToString(val, buffer, 2);
+    int xpos = 10+i*3*TEXT_SPACING_X;
     OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
     if (i == param) {
-      OLED::invertArea(xpos-1, TEXT_SPACING_X*3+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+      OLED::invertArea(xpos-1, TEXT_SPACING_X*2+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
     }
     val = patch->currentPatch[op*21+4+i];
-    intToString(val, buffer, 3);
+    intToString(val, buffer, 2);
     OLED::drawString(buffer, xpos, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
     if (i+4 == param) {
-      OLED::invertArea(xpos-1, TEXT_SPACING_X*3+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+      OLED::invertArea(xpos-1, TEXT_SPACING_X*2+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
     }
   }
 }
@@ -478,11 +489,11 @@ void Dx7UImod::renderTuning(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int
   int ybel2 = ybel+(TEXT_SIZE_Y_UPDATED+2);
   for (int i = 0; i < 3; i++) {
     int val = patch->currentPatch[op*21+i+18];
-    intToString(val, buffer, 3);
-    int xpos = 10+(6+i*4)*TEXT_SPACING_X;
+    intToString(val, buffer, 2);
+    int xpos = 10+(6+i*3)*TEXT_SPACING_X;
     OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
     if (i+18 == param) {
-      OLED::invertArea(xpos-1, TEXT_SPACING_X*3+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+      OLED::invertArea(xpos-1, TEXT_SPACING_X*2+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
     }
   }
 
@@ -497,11 +508,11 @@ void Dx7UImod::renderTuning(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int
   OLED::drawString("level", xpos, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
 
   int val = patch->currentPatch[op*21+16];
-  intToString(val, buffer, 3);
+  intToString(val, buffer, 2);
   int xpos2 = 10+6*TEXT_SPACING_X;
   OLED::drawString(buffer, xpos2, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
   if (16 == param) {
-    OLED::invertArea(xpos2-1, TEXT_SPACING_X*3+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+    OLED::invertArea(xpos2-1, TEXT_SPACING_X*2+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
   }
 
 }
