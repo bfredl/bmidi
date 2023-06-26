@@ -31,6 +31,8 @@ public:
 	                   uint8_t occupancyMask[][displayWidth + sideBarWidth]);
 #if HAVE_OLED
   void renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]);
+  void renderEnvelope(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param);
+  void renderScaling(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param);
 #endif
 
   void openFile();
@@ -338,7 +340,6 @@ bool Dx7UImod::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth +
 	return true;
 }
 
-
 void Dx7UImod::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
   if (patch && state == kStateEditing) {
     char buffer[12];
@@ -379,6 +380,12 @@ void Dx7UImod::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
     }
     OLED::drawString(extra, 4*TEXT_SPACING_X, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
 
+    if (param < 6*21 && idx < 8) {
+      renderEnvelope(image, op, idx);
+    } else if (param < 6*21 && idx < 13) {
+      renderScaling(image, op, idx);
+    }
+
   } else if (state == kStateLoading) {
     char buffer[12];
     intToString(cartPos+1, buffer, 3);
@@ -390,6 +397,76 @@ void Dx7UImod::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
     OLED::drawString(text, 0, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
   }
 }
+
+void Dx7UImod::renderEnvelope(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param) {
+  char buffer[12];
+  int ybel = 5+2*(TEXT_SIZE_Y_UPDATED+2)+2;
+  int ybel2 = ybel+(TEXT_SIZE_Y_UPDATED+2);
+  for (int i = 0; i < 4; i++) {
+    int val = patch->currentPatch[op*21+i];
+    intToString(val, buffer, 3);
+    int xpos = 10+i*4*TEXT_SPACING_X;
+    OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+    if (i == param) {
+      OLED::invertArea(xpos-1, TEXT_SPACING_X*3+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+    }
+    val = patch->currentPatch[op*21+4+i];
+    intToString(val, buffer, 3);
+    OLED::drawString(buffer, xpos, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+    if (i+4 == param) {
+      OLED::invertArea(xpos-1, TEXT_SPACING_X*3+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+    }
+  }
+}
+
+void Dx7UImod::renderScaling(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param) {
+  char buffer[12];
+  int ybel = 5+2*(TEXT_SIZE_Y_UPDATED+2)+2;
+  int ybel2 = ybel+(TEXT_SIZE_Y_UPDATED+2);
+  int ybelmid = (ybel+ybel2)>>1;
+
+  for (int i = 0; i < 2; i++) {
+    int val = patch->currentPatch[op*21+9+i];
+    intToString(val, buffer, 3);
+    int xpos = 14+i*11*TEXT_SPACING_X;
+    OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+    if (9+i == param) {
+      OLED::invertArea(xpos-1, TEXT_SPACING_X*3+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+    }
+
+    val = patch->currentPatch[op*21+11+i];
+    int kurva = min(val,4);
+    OLED::drawString(curves[kurva], xpos, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+    if (11+i == param) {
+      OLED::invertArea(xpos-1, TEXT_SPACING_X*4+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+    }
+  }
+
+  int val = patch->currentPatch[op*21+8];
+  intToString(val, buffer, 3);
+  int xpos = 14+6*TEXT_SPACING_X;
+  OLED::drawString(buffer, xpos, ybelmid, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+  if (8 == param) {
+    OLED::invertArea(xpos-1, TEXT_SPACING_X*3+1, ybelmid-1, ybelmid + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+  }
+
+  int noteCode = val + 17;
+	if (getRootUI() == &keyboardScreen) {
+    InstrumentClip *clip = (InstrumentClip*)currentSong->currentClip;
+    int notedisp = noteCode - clip->yScrollKeyboardScreen;
+    int x = notedisp;
+    int y = 0;
+    while (x>10 && y < 7) {
+      x -= 5;  // fUBBIGT
+      y += 1;
+    }
+    if (x >= 0 && x < 16) {
+      soundEditor.setupShortcutBlink(x, y, 2);
+    }
+  }
+
+}
+
 #endif
 
 int Dx7UImod::buttonAction(int x, int y, bool on, bool inCardRoutine) {
