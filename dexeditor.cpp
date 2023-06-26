@@ -33,6 +33,7 @@ public:
   void renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]);
   void renderEnvelope(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param);
   void renderScaling(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param);
+  void renderTuning(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param);
 #endif
 
   void openFile();
@@ -380,10 +381,14 @@ void Dx7UImod::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
     }
     OLED::drawString(extra, 4*TEXT_SPACING_X, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
 
-    if (param < 6*21 && idx < 8) {
-      renderEnvelope(image, op, idx);
+    if (param < (6*21+8) && idx < 8) {
+      renderEnvelope(image, op, idx); // op== 6 for pitch envelope
     } else if (param < 6*21 && idx < 13) {
       renderScaling(image, op, idx);
+    } else if (param < 6*21 && idx < 16) {
+      // :P
+    } else if (param < 6*21 && idx < 21) {
+      renderTuning(image, op, idx);
     }
 
   } else if (state == kStateLoading) {
@@ -461,8 +466,42 @@ void Dx7UImod::renderScaling(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, in
       y += 1;
     }
     if (x >= 0 && x < 16) {
+      // TODO: different color, do not override the main shortcut blink
       soundEditor.setupShortcutBlink(x, y, 2);
     }
+  }
+}
+
+void Dx7UImod::renderTuning(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param) {
+  char buffer[12];
+  int ybel = 5+2*(TEXT_SIZE_Y_UPDATED+2)+2;
+  int ybel2 = ybel+(TEXT_SIZE_Y_UPDATED+2);
+  for (int i = 0; i < 3; i++) {
+    int val = patch->currentPatch[op*21+i+18];
+    intToString(val, buffer, 3);
+    int xpos = 10+(6+i*4)*TEXT_SPACING_X;
+    OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+    if (i+18 == param) {
+      OLED::invertArea(xpos-1, TEXT_SPACING_X*3+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+    }
+  }
+
+  int mode = patch->currentPatch[op*21+17];
+  const char *text = mode ? "fixed" : "pitch";
+  int xpos = 10;
+  OLED::drawString(text, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+  if (17 == param) {
+    OLED::invertArea(xpos-1, TEXT_SPACING_X*5+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+  }
+
+  OLED::drawString("level", xpos, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+
+  int val = patch->currentPatch[op*21+16];
+  intToString(val, buffer, 3);
+  int xpos2 = 10+6*TEXT_SPACING_X;
+  OLED::drawString(buffer, xpos2, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+  if (16 == param) {
+    OLED::invertArea(xpos2-1, TEXT_SPACING_X*3+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
   }
 
 }
