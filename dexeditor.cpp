@@ -15,6 +15,8 @@
 #include "uitimermanager.h"
 #include "dexed/engine.h"
 #include "dexed/PluginData.h"
+#include "Browser.h"
+#include "FileItem.h"
 
 class Dx7UImod final : public UI {
 public:
@@ -61,11 +63,124 @@ public:
   int uplim = 127;
 
   bool loadPending = false;
+  bool validFilename = false;
   char progName[11];
+
+  char syxFilename[128];
 };
 
+
+class SyxBrowser final : public Browser {
+public:
+	SyxBrowser();
+  bool opened();
+	void enterKeyPress();
+	int getCurrentFilePath(String* path);
+};
+
+static Dx7UImod dx7ui;
+
+SyxBrowser::SyxBrowser() {
+#if HAVE_OLED
+	fileIcon = OLED::waveIcon;
+	title = "DX7 syx files";
+#else
+	shouldWrapFolderContents = false;
+#endif
+  }
+
+char const* allowedFileExtensionsSyx[] = {"SYX", NULL};
+bool SyxBrowser::opened() {
+
+	bool success = Browser::opened();
+	if (!success) return false;
+
+  allowedFileExtensions = allowedFileExtensionsSyx;
+
+  allowFoldersSharingNameWithFile = true;
+  instrumentTypeToLoad = 255;
+  qwertyVisible = false;
+
+#if HAVE_OLED
+  fileIndexSelected = 0;
+#endif
+
+	int error = storageManager.initSD();
+	if (error) goto sdError;
+
+  currentDir.set("DX7");
+
+  // TODO: fill in last used name!
+  error = arrivedInNewFolder(1, "", "DX7");
+	if (error) goto sdError;
+
+  return true;
+sdError:
+		numericDriver.displayError(error);
+		return false;
+}
+
+// TODO: this is identical to SampleBrowser, move to parent class?
+int SyxBrowser::getCurrentFilePath(String* path) {
+	int error;
+
+	path->set(&currentDir);
+	int oldLength = path->getLength();
+	if (oldLength) {
+		error = path->concatenateAtPos("/", oldLength);
+		if (error) {
+gotError:
+			path->clear();
+			return error;
+		}
+	}
+
+	FileItem* currentFileItem = getCurrentFileItem();
+
+	error = path->concatenate(&currentFileItem->filename);
+	if (error) goto gotError;
+
+	return NO_ERROR;
+}
+
+void SyxBrowser::enterKeyPress() {
+	FileItem* currentFileItem = getCurrentFileItem();
+	if (!currentFileItem) {
+    return;
+  }
+
+  
+		if (currentFileItem->isFolder) {
+      // [SIC]
+			char const* filenameChars =
+			    currentFileItem->filename
+			        .get(); // Extremely weirdly, if we try to just put this inside the parentheses in the next line,
+			                // it returns an empty string (&nothing). Surely this is a compiler error??
+
+			int error = goIntoFolder(filenameChars);
+			if (error) {
+				numericDriver.displayError(error);
+				close(); // Don't use goBackToSoundEditor() because that would do a left-scroll
+				return;
+			}
+    } else {
+      // TODO: c.f. slotbrowser, we might just be able to pass a file pointer to the FAT loader
+      String path;
+      getCurrentFilePath(&path);
+      int len = path.getLength();
+      if (len < sizeof dx7ui.syxFilename) {
+        memcpy(dx7ui.syxFilename, path.get(), len);;
+        dx7ui.validFilename = true;
+      }
+      close();
+      dx7ui.openFile();
+    }
+}
+
+static SyxBrowser syxBrowser;
+
 void Dx7UImod::openFile() {
-  const char *path = "dx7.syx";
+  const char *path = validFilename ? syxFilename : "dx7.syx";
   const int xx = 4104;
 
   FILINFO fno;
@@ -600,6 +715,10 @@ int Dx7UImod::buttonAction(int x, int y, bool on, bool inCardRoutine) {
       OLED::popupText("overwrite? press again", false);
       loadPending = true;
     }
+    // TODO: the below will be the new load button
+  } else if (x == sessionViewButtonX && y == sessionViewButtonY && on) {
+    bool success = openUI(&syxBrowser);
+
   } else if (x == clipViewButtonX && y == clipViewButtonY) {
     did_button = true;
     uiTimerManager.unsetTimer(TIMER_SHORTCUT_BLINK);
@@ -611,10 +730,10 @@ int Dx7UImod::buttonAction(int x, int y, bool on, bool inCardRoutine) {
   return ACTION_RESULT_DEALT_WITH;
 }
 
-static Dx7UImod dx7ui;
 
 extern void mod_main(int*,int*) {
   new (&dx7ui) Dx7UImod;
+  new (&syxBrowser) SyxBrowser;
   dexedUI = &dx7ui;
 }
 
