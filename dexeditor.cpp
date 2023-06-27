@@ -35,6 +35,7 @@ public:
   void renderScaling(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param);
   void renderTuning(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param);
   void renderLFO(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int param);
+  void renderAlgorithm(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]);
 #endif
 
   void openFile();
@@ -125,6 +126,7 @@ void Dx7UImod::doLoad(int delta) {
   cart.unpackProgram(patch->currentPatch, cartPos);
   Cartridge::normalizePgmName(progName, (const char *)&patch->currentPatch[145]);
   renderUIsForOled();
+  uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
 }
 
 void Dx7UImod::focusRegained() {
@@ -176,6 +178,8 @@ int Dx7UImod::potentialShortcutPadAction(int x, int y, int on) {
 
   state = kStateNone;
   param = -1;
+
+  uplim = 127;
 
   if (y > 1) {
     uplim = 99;
@@ -430,6 +434,8 @@ void Dx7UImod::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
       // :P
     } else if (param < 6*21 && idx < 21) {
       renderTuning(image, op, idx);
+    } else if (param == 134) {
+      renderAlgorithm(image);
     } else if (param >= 137 && param < 144) {
       renderLFO(image, param);
     }
@@ -601,6 +607,30 @@ void Dx7UImod::renderLFO(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int param) {
   }
 }
 
+void Dx7UImod::renderAlgorithm(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
+  FmAlgorithm a = FmCore::algorithms[patch->currentPatch[134]];
+
+  for (int i = 0; i < 6; i++) {
+    int f = a.ops[i];
+    char buffer[12];
+    int inbus = (f >> 4) & 3;
+    int outbus = f & 3;
+    const char ib[] = {'.', 'x', 'y', 'z'};
+    const char ob[] = {'c', 'x', 'y', 'q'};
+    buffer[0] = '1'+i;
+    buffer[1] = ':';
+    buffer[2] = ib[inbus];
+    buffer[3] = (f & OUT_BUS_ADD) ? '+': '>';
+    buffer[4] = ob[outbus];
+    buffer[5] = (f & FB_IN) ? 'f' : ' ';
+    buffer[6] = 0;
+
+    int r = i/3, c = i%3;
+    int ybel = 5+2*(TEXT_SIZE_Y_UPDATED+2)+2+r*(TEXT_SIZE_Y_UPDATED+2);
+    int xpos = 6+c*7*TEXT_SPACING_X;
+    OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+  }
+}
 #endif
 
 int Dx7UImod::buttonAction(int x, int y, bool on, bool inCardRoutine) {
