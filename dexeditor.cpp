@@ -452,56 +452,51 @@ void Dx7UImod::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
   }
 }
 
-void Dx7UImod::renderEnvelope(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param) {
-  char buffer[12];
-  int ybel = 5+2*(TEXT_SIZE_Y_UPDATED+2)+2;
-  int ybel2 = ybel+(TEXT_SIZE_Y_UPDATED+2);
-  for (int i = 0; i < 4; i++) {
-    int val = patch->currentPatch[op*21+i];
-    intToString(val, buffer, 2);
-    int xpos = 10+i*3*TEXT_SPACING_X;
-    OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-    if (i == param) {
-      OLED::invertArea(xpos-1, TEXT_SPACING_X*2+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-    }
-    val = patch->currentPatch[op*21+4+i];
-    intToString(val, buffer, 2);
-    OLED::drawString(buffer, xpos, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-    if (i+4 == param) {
-      OLED::invertArea(xpos-1, TEXT_SPACING_X*2+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-    }
+void show(const char *text, int r, int c, bool inv = false) {
+  int ybel = 7+(2+r)*(TEXT_SIZE_Y_UPDATED+2);
+  int xpos = 4+c*TEXT_SPACING_X;
+  OLED::drawString(text, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+  if (inv) {
+    int width = strlen(text);
+    OLED::invertArea(xpos-1, TEXT_SPACING_X*width+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
   }
 }
 
+void show(int val, int r, int c, bool inv = false) {
+  char buffer[12];
+  intToString(val, buffer, 2);
+  show(buffer, r, c, inv);
+}
+
+void Dx7UImod::renderEnvelope(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param) {
+  for (int i = 0; i < 4; i++) {
+    int val = patch->currentPatch[op*21+i];
+    show(val, 0, i*3, (i == param));
+    val = patch->currentPatch[op*21+4+i];
+    show(val, 1, i*3, (i+4 == param));
+  }
+}
+
+
 void Dx7UImod::renderScaling(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param) {
   char buffer[12];
-  int ybel = 5+2*(TEXT_SIZE_Y_UPDATED+2)+2;
-  int ybel2 = ybel+(TEXT_SIZE_Y_UPDATED+2);
-  int ybelmid = (ybel+ybel2)>>1;
 
   for (int i = 0; i < 2; i++) {
     int val = patch->currentPatch[op*21+9+i];
-    intToString(val, buffer, 2);
-    int xpos = 14+i*11*TEXT_SPACING_X;
-    OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-    if (9+i == param) {
-      OLED::invertArea(xpos-1, TEXT_SPACING_X*3+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-    }
+    show(val, 0, 1+i*11, (9+i == param));
 
     val = patch->currentPatch[op*21+11+i];
     int kurva = min(val,4);
-    OLED::drawString(curves[kurva], xpos, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-    if (11+i == param) {
-      OLED::invertArea(xpos-1, TEXT_SPACING_X*4+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-    }
+    show(curves[kurva], 1, 1+i*11, (11+i == param));
   }
 
+  int ybelmid = 7+2*(TEXT_SIZE_Y_UPDATED+2)+((TEXT_SIZE_Y_UPDATED+1)>>1);
   int val = patch->currentPatch[op*21+8];
   intToString(val, buffer, 2);
   int xpos = 14+6*TEXT_SPACING_X;
   OLED::drawString(buffer, xpos, ybelmid, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
   if (8 == param) {
-    OLED::invertArea(xpos-1, TEXT_SPACING_X*3+1, ybelmid-1, ybelmid + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+    OLED::invertArea(xpos-1, TEXT_SPACING_X*2+1, ybelmid-1, ybelmid + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
   }
 
   int noteCode = val + 17;
@@ -522,36 +517,19 @@ void Dx7UImod::renderScaling(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, in
 }
 
 void Dx7UImod::renderTuning(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int op, int param) {
-  char buffer[12];
-  int ybel = 5+2*(TEXT_SIZE_Y_UPDATED+2)+2;
-  int ybel2 = ybel+(TEXT_SIZE_Y_UPDATED+2);
-  for (int i = 0; i < 3; i++) {
-    int val = patch->currentPatch[op*21+i+18];
-    intToString(val, buffer, 2);
-    int xpos = 10+(6+i*3)*TEXT_SPACING_X;
-    OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-    if (i+18 == param) {
-      OLED::invertArea(xpos-1, TEXT_SPACING_X*2+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-    }
-  }
-
   int mode = patch->currentPatch[op*21+17];
   const char *text = mode ? "fixed" : "pitch";
-  int xpos = 10;
-  OLED::drawString(text, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-  if (17 == param) {
-    OLED::invertArea(xpos-1, TEXT_SPACING_X*5+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
+  show(text, 0, 1, (17 == param));
+
+  for (int i = 0; i < 3; i++) {
+    int val = patch->currentPatch[op*21+i+18];
+    show(val, 0, 7+i*3, (i+18 == param));
   }
 
-  OLED::drawString("level", xpos, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+  show("level", 1, 1);
 
   int val = patch->currentPatch[op*21+16];
-  intToString(val, buffer, 2);
-  int xpos2 = 10+6*TEXT_SPACING_X;
-  OLED::drawString(buffer, xpos2, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-  if (16 == param) {
-    OLED::invertArea(xpos2-1, TEXT_SPACING_X*2+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-  }
+  show(val, 1, 7, (16 == param));
 }
 
 void Dx7UImod::renderLFO(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int param) {
@@ -561,12 +539,7 @@ void Dx7UImod::renderLFO(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int param) {
 
   for (int i = 0; i < 2; i++) {
     int val = patch->currentPatch[137+i];
-    intToString(val, buffer, 2);
-    int xpos = 10+(i*3)*TEXT_SPACING_X;
-    OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-    if (i+137 == param) {
-      OLED::invertArea(xpos-1, TEXT_SPACING_X*2+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-    }
+    show(val, 0, 1+i*3, (137+i == param));
   }
 
   for (int i = 0; i < 2; i++) {
@@ -575,36 +548,18 @@ void Dx7UImod::renderLFO(uint8_t image[][OLED_MAIN_WIDTH_PIXELS], int param) {
     int xpre = 10+(i*9)*TEXT_SPACING_X;
     int xpos = xpre+6*TEXT_SPACING_X;
     const char *text = (i == 0) ? "pitch" : "  amp";
-    OLED::drawString(text, xpre, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-    OLED::drawString(buffer, xpos, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-    if (i+139 == param) {
-      OLED::invertArea(xpos-1, TEXT_SPACING_X*2+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-    }
+    show(text, 1, 1+i*9);
+    show(val, 1, 1+i*9+6, (i+139==param));
   }
 
-  int xpos = 10+6*TEXT_SPACING_X;
   const char* sync = (patch->currentPatch[141] ? "sync" : "    ");
-  OLED::drawString(sync, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-  if (141 == param) {
-    OLED::invertArea(xpos-1, TEXT_SPACING_X*4+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-  }
-
-  xpos = 10+11*TEXT_SPACING_X;
+  show(sync, 0, 7, (141 == param));
   int shap = min((int)patch->currentPatch[142],5);
-  OLED::drawString(shapes[shap], xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-  if (142 == param) {
-    int len = strlen(shapes[shap]);
-    OLED::invertArea(xpos-1, TEXT_SPACING_X*len+1, ybel-1, ybel + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-  }
+  show(shapes[shap], 0, 12, (142 == param));
 
   int val = patch->currentPatch[143];
   intToString(val, buffer, 1);
-  xpos = 10+9*TEXT_SPACING_X;
-  OLED::drawString(buffer, xpos, ybel2, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
-  if (143 == param) {
-    int len = strlen(shapes[shap]);
-    OLED::invertArea(xpos-1, TEXT_SPACING_X+1, ybel2-1, ybel2 + TEXT_SIZE_Y_UPDATED, OLED::oledMainImage);
-  }
+  show(buffer, 1, 10, (143 == param));
 }
 
 void Dx7UImod::renderAlgorithm(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
@@ -622,13 +577,11 @@ void Dx7UImod::renderAlgorithm(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
     buffer[2] = ib[inbus];
     buffer[3] = (f & OUT_BUS_ADD) ? '+': '>';
     buffer[4] = ob[outbus];
-    buffer[5] = (f & FB_IN) ? 'f' : ' ';
+    buffer[5] = (f & (FB_IN|FB_OUT)) ? 'f' : ' ';
     buffer[6] = 0;
 
     int r = i/3, c = i%3;
-    int ybel = 5+2*(TEXT_SIZE_Y_UPDATED+2)+2+r*(TEXT_SIZE_Y_UPDATED+2);
-    int xpos = 6+c*7*TEXT_SPACING_X;
-    OLED::drawString(buffer, xpos, ybel, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+    show(buffer, r, c*7);
   }
 }
 #endif
