@@ -250,6 +250,7 @@ void Dx7UImod::selectEncoderAction(int8_t offset) {
     if (newval < 0) newval = 0;
     patch->currentPatch[param] = newval;
     renderUIsForOled();
+    uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
   } else if (state == kStateLoading) {
     doLoad(offset);
   }
@@ -287,6 +288,9 @@ bool Dx7UImod::renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + 
                                        uint8_t occupancyMask[][displayWidth + sideBarWidth]) {
 	if (!image) return true;
 
+  int algid = patch ? patch->currentPatch[134] : 0;
+  FmAlgorithm a = FmCore::algorithms[algid];
+
 	for (int i = 0; i < displayHeight; i++) {
 		if (!(whichRows & (1 << i))) continue;
     uint8_t* thisColour = image[i][displayWidth];
@@ -297,8 +301,10 @@ bool Dx7UImod::renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + 
       char* val = &Dexed::dummy_controller.opSwitch[op];
       if (*val == '0') {
         color(thisColour, 255, 0, 0);
+      } else if (a.ops[op] & (OUT_BUS_ONE | OUT_BUS_TWO))  {
+        color(thisColour, 0, 128, 255);  // modulator
       } else {
-        color(thisColour, 0, 255, 0);
+        color(thisColour, 0, 255, 0);  // carrier
       }
     } else {
         color(thisColour, 0, 0, 0);
