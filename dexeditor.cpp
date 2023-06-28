@@ -1,22 +1,23 @@
-#include "oled.h"
-#include <RootUI.h>
 #include <new>
-#include "extern.h"
-#include "soundeditor.h"
-#include <soundinstrument.h>
-#include "song.h"
-#include "InstrumentClip.h"
-#include "NoteRow.h"
-#include "ModelStack.h"
-#include "kit.h"
-#include "KeyboardScreen.h"
-#include "Buttons.h"
-#include "GeneralMemoryAllocator.h"
-#include "uitimermanager.h"
+#include "processing/sound/sound_instrument.h"
+#include "model/song/song.h"
+#include "model/clip/instrument_clip.h"
+#include "model/note/note_row.h"
+#include "model/model_stack.h"
+#include "model/drum/kit.h"
+#include "gui/ui/keyboard_screen.h"
+#include "gui/ui/sound_editor.h"
+#include "hid/buttons.h"
+#include "memory/general_memory_allocator.h"
+#include "gui/ui_timer_manager.h"
+#include "hid/display/oled.h"
+#include "gui/ui/root_ui.h"
 #include "dexed/engine.h"
 #include "dexed/PluginData.h"
-#include "Browser.h"
-#include "FileItem.h"
+#include "extern.h"
+
+#include "gui/ui/browser/browser.h"
+#include "storage/file_item.h"
 
 class Dx7UImod final : public UI {
 public:
@@ -240,6 +241,7 @@ void Dx7UImod::doLoad(int delta) {
 
   cart.unpackProgram(patch->currentPatch, cartPos);
   Cartridge::normalizePgmName(progName, (const char *)&patch->currentPatch[145]);
+  patch->updateLfo();
   renderUIsForOled();
   uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
 }
@@ -262,7 +264,7 @@ void Dx7UImod::focusRegained() {
 int Dx7UImod::padAction(int x, int y, int on) {
   if (x == displayWidth && on && y > 1) {
     int op = 8-y-1; // op 0-5
-    char* val = &Dexed::dummy_controller.opSwitch[op];
+    char* val = &patch->opSwitch[op];
     *val = (*val == '0' ? '1' : '0');
     uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
   }
@@ -368,6 +370,9 @@ void Dx7UImod::selectEncoderAction(int8_t offset) {
     if (newval > uplim) newval = uplim;
     if (newval < 0) newval = 0;
     patch->currentPatch[param] = newval;
+    if (param == 137) {
+      patch->updateLfo();
+    }
     renderUIsForOled();
     uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
   } else if (state == kStateLoading) {
@@ -417,7 +422,7 @@ bool Dx7UImod::renderSidebar(uint32_t whichRows, uint8_t image[][displayWidth + 
 
     bool muted = false;
     if (op < 6) {
-      char* val = &Dexed::dummy_controller.opSwitch[op];
+      char* val = &patch->opSwitch[op];
       if (*val == '0') {
         color(thisColour, 255, 0, 0);
       } else if (a.ops[op] & (OUT_BUS_ONE | OUT_BUS_TWO))  {
@@ -447,7 +452,7 @@ bool Dx7UImod::renderMainPads(uint32_t whichRows, uint8_t image[][displayWidth +
     memset(image[i], 0, 3*16);
     int op = 8-i-1; // op 0-5
     if (op < 6) {
-      char* val = &Dexed::dummy_controller.opSwitch[op];
+      char* val = &patch->opSwitch[op];
       for (int x = 0; x < 4; x++) {
         color(image[i][x], 0, 120, 0);
         color(image[i][x+4], 0, 40, 110);
