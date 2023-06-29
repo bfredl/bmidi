@@ -5,7 +5,6 @@ int main(int argc, char **argv)
 {
   if (argc < 3) return 1;
   char *port_name = argv[1];
-  static snd_rawmidi_t *input;
   static snd_rawmidi_t *output;
 
   int exec = 0;
@@ -19,7 +18,7 @@ int main(int argc, char **argv)
     printf("offset: 16*%d=%d\n", pos_off, pos_off*16);
   }
 
-  int status = snd_rawmidi_open(&input, &output, port_name, 0);
+  int status = snd_rawmidi_open(NULL, &output, port_name, 0);
 
   if (status < 0) {
     fprintf(stderr, "no port! %s", snd_strerror(status));

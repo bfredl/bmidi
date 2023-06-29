@@ -5,3 +5,4 @@ checkhash
 DelugeFirmware
 *.bin
 *.elf
+getdata

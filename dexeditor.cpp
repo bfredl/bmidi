@@ -41,7 +41,7 @@ public:
   void renderAlgorithm(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]);
 #endif
 
-  void openFile();
+  void openFile(const char *path);
   void doLoad(int delta);
 
   int potentialShortcutPadAction(int x, int y, int on);
@@ -64,7 +64,6 @@ public:
   int uplim = 127;
 
   bool loadPending = false;
-  bool validFilename = false;
   char progName[11];
 
   char syxFilename[128];
@@ -169,19 +168,14 @@ void SyxBrowser::enterKeyPress() {
       String path;
       getCurrentFilePath(&path);
       int len = path.getLength();
-      if (len < sizeof dx7ui.syxFilename) {
-        memcpy(dx7ui.syxFilename, path.get(), len);;
-        dx7ui.validFilename = true;
-      }
       close();
-      dx7ui.openFile();
+      dx7ui.openFile(path.get());
     }
 }
 
 static SyxBrowser syxBrowser;
 
-void Dx7UImod::openFile() {
-  const char *path = validFilename ? syxFilename : "dx7.syx";
+void Dx7UImod::openFile(const char *path) {
   const int xx = 4104;
 
   FILINFO fno;
@@ -221,17 +215,14 @@ void Dx7UImod::openFile() {
 
   cartValid = true;
   cartPos = 0;
+  doLoad(0);
 
 free:
   generalMemoryAllocator.dealloc(buffer);
 }
 
 void Dx7UImod::doLoad(int delta) {
-  if (!patch) return;
-  if (!cartValid) {
-    openFile();
-    if (!cartValid) return;
-  }
+  if (!patch || !cartValid) return;
   state = kStateLoading;
   uiTimerManager.unsetTimer(TIMER_SHORTCUT_BLINK);
 
@@ -241,7 +232,6 @@ void Dx7UImod::doLoad(int delta) {
 
   cart.unpackProgram(patch->currentPatch, cartPos);
   Cartridge::normalizePgmName(progName, (const char *)&patch->currentPatch[145]);
-  patch->updateLfo();
   renderUIsForOled();
   uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
 }
@@ -370,9 +360,6 @@ void Dx7UImod::selectEncoderAction(int8_t offset) {
     if (newval > uplim) newval = uplim;
     if (newval < 0) newval = 0;
     patch->currentPatch[param] = newval;
-    if (param == 137) {
-      patch->updateLfo();
-    }
     renderUIsForOled();
     uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
   } else if (state == kStateLoading) {
@@ -710,7 +697,12 @@ int Dx7UImod::buttonAction(int x, int y, bool on, bool inCardRoutine) {
   if (on && loadPending) {
     if (x == loadButtonX && y == loadButtonY) {
       loadPending = false;
-      doLoad(0);
+
+      if (!cartValid) {
+        bool success = openUI(&syxBrowser);
+      } else {
+        doLoad(0);
+      }
       return ACTION_RESULT_DEALT_WITH;
     }
   }
@@ -719,10 +711,12 @@ int Dx7UImod::buttonAction(int x, int y, bool on, bool inCardRoutine) {
     if (state != kStateLoading) {
       OLED::popupText("overwrite? press again", false);
       loadPending = true;
+    } else {
+      // already in loading, reopen browser
+      bool success = openUI(&syxBrowser);
     }
     // TODO: the below will be the new load button
   } else if (x == sessionViewButtonX && y == sessionViewButtonY && on) {
-    bool success = openUI(&syxBrowser);
 
   } else if (x == clipViewButtonX && y == clipViewButtonY) {
     did_button = true;
