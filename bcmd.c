@@ -7,10 +7,9 @@ int main(int argc, char **argv)
 {
   if (argc < 4) return 1;
   char *port_name = argv[1];
-  static snd_rawmidi_t *input;
   static snd_rawmidi_t *output;
 
-  int status = snd_rawmidi_open(&input, &output, port_name, 0);
+  int status = snd_rawmidi_open(NULL, &output, port_name, 0);
 
   if (status < 0) {
     fprintf(stderr, "no port! %s", snd_strerror(status));

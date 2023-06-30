@@ -2,6 +2,7 @@
 #include "io/midi/midi_engine.h"
 #include "syx_pack.h"
 #include "util/functions.h"
+#include "gui/ui_timer_manager.h"
 
 void pack(uint8_t status, uint8_t byte);
 
@@ -11,7 +12,7 @@ volatile int write_pos = 0;
 volatile int read_pos = 0;
 bool buffering = false;
 
-bool (*midi_send_callback)(void) = NULL;
+extern bool (*midi_send_callback)(void);
 
 bool midi_do_send(void) {
   if (!buffering) return false;
@@ -52,10 +53,10 @@ void send_sysex(uint8_t *data, int len) {
     }
     uint32_t packed = ((uint32_t)byte2 << 24) | ((uint32_t)byte1 << 16) | ((uint32_t)byte0 << 8) | status;
     if (!buffering) {
-      if (connectedUSBMIDIDevices[0][0].numMessagesQueued >= 15) {
-        buffering = true;
-        OLED::popupText("bufer", true);
-      }
+      // if (connectedUSBMIDIDevices[0][0].numMessagesQueued >= ) {
+      //   buffering = true;
+      //   OLED::popupText("bufer", true);
+      // }
       midiEngine.sendUsbMidiRaw(packed, 0);
     } else {
       bulk_buffer[write_pos] = packed;
@@ -105,25 +106,39 @@ void big_sysex() {
   send_sysex(buffer, 128);
 }
 
+int x = 0;
+void me_timer(void) {
+    char ebuf[10];
+    intToString(x++, ebuf);
+    OLED::popupText(ebuf, true);
+    timer_module_cb = me_timer;
+    uiTimerManager.setTimer(TIMER_MODULE, 1500);
+}
+
 extern void mod_main(int*,int*) {
 		int potentialNumDevices = midiEngine.getPotentialNumConnectedUSBMIDIDevices(0);
     char ebuf[10];
     intToString(potentialNumDevices, ebuf);
-  OLED::popupText(ebuf, true);
+  // OLED::popupText(ebuf, true);
   //return;
 
+  int x = 0;
   //OLED::popupText("halloj", true);
   uint8_t mySysex[] = {0xf0, 0x7e, 0x11, 0x22, 0xf7};
   //send_sysex(mySysex, sizeof mySysex);
-  midi_send_callback = midi_do_send;
+  // midi_send_callback = midi_do_send;
 
   // TODO: ring buffer for real
   buffering = false;
   write_pos = 0;
   read_pos = 0;
 
-  big_sysex();
+  // big_sysex();
   // pack_led();
+  x = 0;
+  timer_module_cb = me_timer;
+  uiTimerManager.setTimer(TIMER_MODULE, 1500);
+
 }
 
 #define USB_NUM_USBIP (1u) // Set by Rohan

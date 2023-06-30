@@ -40,6 +40,22 @@ int main(int argc, char **argv)
   uint32_t hash = __ac_X31_hash_string((unsigned char*)buffer, size);
   printf("hash: %d\n", hash);
 
+  uint8_t data[25] = "\xf0hello sysex\xf7";
+  int len = 0;
+
+  data[0] = 0xf0;
+  data[1] = 0x67;
+  data[2] = 25;  // turn off module timer
+  data[3] = 0;
+  data[4] = 0;
+  data[5] = 0;
+  data[6] = 0xf7;
+  len = 7;
+  status = snd_rawmidi_write(output, data, len);
+  if (status < 0) {
+    fprintf(stderr, "no write! %s", snd_strerror(status));
+  }
+
   for (int seg = 0; seg < segs; seg += 1) {
     int pos_low = seg & 0x7f;
     int pos_high = (seg >> 7) & 0x7f;
@@ -47,13 +63,11 @@ int main(int argc, char **argv)
 
     unsigned char *bytes = (unsigned char*)(buffer+buf_pos);
 
-    uint8_t data[25] = "\xf0hello sysex\xf7";
     data[0] = 0xf0;
     data[1]= 0x67;
     data[2] = 0; // WRITE
     data[3] = pos_low;
     data[4] = pos_high;
-    int len = 0;
 
     bytes_to_msg(data, bytes);
     len = 25;
@@ -62,7 +76,6 @@ int main(int argc, char **argv)
     usleep(10);
   }
   
-  uint8_t data[25] = "\xf0hello sysex\xf7";
   data[0] = 0xf0;
   data[1]= 0x67;
   data[2] = 24; // HASH
@@ -74,7 +87,7 @@ int main(int argc, char **argv)
   ibytes[1] = size;
 
   bytes_to_msg(data, (unsigned char *)ibytes);
-  int len = 25;
+  len = 25;
 
   status = snd_rawmidi_write(output, data, len);
   if (status < 0) {
