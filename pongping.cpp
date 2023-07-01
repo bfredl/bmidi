@@ -99,11 +99,11 @@ void big_sysex() {
   buffer[0] = 0xf0; // status: sysex
   buffer[1] = 0x7e; // :zany_face:
   buffer[2] = 0x69; // TESTING
-  for (int i = 3; i < 127; i++) {
+  for (int i = 3; i < 95; i++) {
     buffer[i] = i;
   }
-  buffer[127] = 0xf7;
-  send_sysex(buffer, 128);
+  buffer[95] = 0xf7;
+  send_sysex(buffer, 96);
 }
 
 int x = 0;
@@ -116,9 +116,9 @@ void me_timer(void) {
 }
 
 extern void mod_main(int*,int*) {
-		int potentialNumDevices = midiEngine.getPotentialNumConnectedUSBMIDIDevices(0);
-    char ebuf[10];
-    intToString(potentialNumDevices, ebuf);
+		//int potentialNumDevices = midiEngine.getPotentialNumConnectedUSBMIDIDevices(0);
+    //char ebuf[10];
+    //intToString(potentialNumDevices, ebuf);
   // OLED::popupText(ebuf, true);
   //return;
 
@@ -133,11 +133,11 @@ extern void mod_main(int*,int*) {
   write_pos = 0;
   read_pos = 0;
 
-  // big_sysex();
+   big_sysex();
   // pack_led();
   x = 0;
   timer_module_cb = me_timer;
-  uiTimerManager.setTimer(TIMER_MODULE, 1500);
+  //uiTimerManager.setTimer(TIMER_MODULE, 1500);
 
 }
 
