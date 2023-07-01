@@ -3,23 +3,25 @@
 
 #include "syx_pack.h"
 
+const char *(blocky[]) = {" ", "▀", "▄", "█"};
+
 void work(uint8_t *data, int len) {
   if (data[0] == 0xf0) {
     uint8_t bollbuffer[32];
-    int xpos = data[3];
-    int ypos = data[4];
+    int ypos = data[3];
+    int xpos = data[4];
     int blk_width = data[5];
-    printf("\nXMISSION %d %d w %d OUTER-SIZ %d\n", xpos, ypos, blk_width, len);
+    //printf("\nXMISSION %d %d w %d OUTER-SIZ %d\n", xpos, ypos, blk_width, len);
     if (blk_width > 32) return;
     unpack_sysex_to_8bit(bollbuffer, 32, data+6, len-7);
 
     for (int rstride = 0; rstride < 4; rstride++) {
+      printf("\033[%d;%dH", (4*ypos+rstride)+1, xpos*blk_width+1);
       int mask = 3 << (2*rstride);
       for (int j = 0; j < blk_width; j++) {
         int idata = (bollbuffer[j] & mask) >> (2*rstride);
-        printf("%d ", idata);
+        printf("%s", blocky[idata]);
       }
-      printf("\n");
     }
 
   } else {
