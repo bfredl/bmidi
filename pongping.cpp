@@ -109,8 +109,8 @@ void big_sysex() {
   send_sysex(buffer, 96);
 }
 
-const int syx_off_ms = 30;
-const int render_off_ms = 100;
+const int syx_off_ms = 6;
+const int render_off_ms = 70;
 
 int x = 0;
 void me_timer(void) {
