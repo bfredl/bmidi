@@ -61,7 +61,6 @@ void send_sysex(uint8_t *data, int len) {
     } else {
       bulk_buffer[write_pos] = packed;
       write_pos++;
-
     }
   }
 
@@ -76,20 +75,24 @@ void pack_led() {
   buffer[0] = 0xf0; // status: sysex
   buffer[1] = 0x7e; // :zany_face:
   buffer[2] = 0x42; // "led image row" indicator
-  for (int i = 0; i < 1; i++) {
-    buffer[3] = i;  // which packed row
-    buffer[4] = data_size&0x7F;       // data_size low 7 bits
-    buffer[5] = (data_size>>7)&0x7f;  // data_size high 7 bits (max 2**14-1 bytes)
-    int len = pack_8bit_to_sysex(buffer+6, (sizeof buffer)-6-1,
-                                 OLED::oledMainImage[i], data_size);
-    if (!len) return;
-    buffer[6+len] = 0xf7; // end of transmission
-    send_sysex(buffer, len+7);
+  const int bolk_size = 32;
+  for (int i = 0; i < 6; i++) {
+    for (int j = 0; j < 4; j++) {
+      buffer[3] = i;  // which packed row
+      buffer[4] = j; // which block
+      buffer[5] = bolk_size;  // block size
 
+      int len = pack_8bit_to_sysex(buffer+6, (sizeof buffer)-6-1,
+                                   &OLED::oledMainImage[i][j*bolk_size], bolk_size);
+      // buffer[20] = 3*j; // JORD O SMUTS
+      if (!len) return;
+      buffer[6+len] = 0xf7; // end of transmission
+      send_sysex(buffer, len+7);
 
-    char ebuf[10];
-    intToString(len+7, ebuf);
-    // OLED::popupText(ebuf);
+      char ebuf[10];
+      intToString(len+7, ebuf);
+      OLED::popupText(ebuf);
+    }
   }
 }
 
@@ -109,35 +112,44 @@ void big_sysex() {
 int x = 0;
 void me_timer(void) {
     char ebuf[10];
-    intToString(x++, ebuf);
+    intToString(read_pos, ebuf);
     OLED::popupText(ebuf, true);
     timer_module_cb = me_timer;
     uiTimerManager.setTimer(TIMER_MODULE, 1500);
+
+    if (read_pos < write_pos) {
+      for (int i = 0; i < 16; i++) {
+        if (read_pos > write_pos) return;  // done, no retrig
+        midiEngine.sendUsbMidiRaw(bulk_buffer[read_pos], 0);
+        read_pos++;
+      }
+    }
 }
 
 extern void mod_main(int*,int*) {
 		//int potentialNumDevices = midiEngine.getPotentialNumConnectedUSBMIDIDevices(0);
-    //char ebuf[10];
-    //intToString(potentialNumDevices, ebuf);
+    char ebuf[10];
   // OLED::popupText(ebuf, true);
   //return;
 
-  int x = 0;
+  x = 0;
   //OLED::popupText("halloj", true);
   uint8_t mySysex[] = {0xf0, 0x7e, 0x11, 0x22, 0xf7};
   //send_sysex(mySysex, sizeof mySysex);
   // midi_send_callback = midi_do_send;
 
   // TODO: ring buffer for real
-  buffering = false;
+  buffering = true;
   write_pos = 0;
   read_pos = 0;
 
-   big_sysex();
-  // pack_led();
+  // big_sysex();
+   pack_led();
+  intToString(write_pos, ebuf);
+   OLED::popupText(ebuf, true);
   x = 0;
   timer_module_cb = me_timer;
-  //uiTimerManager.setTimer(TIMER_MODULE, 1500);
+  uiTimerManager.setTimer(TIMER_MODULE, 1500);
 
 }
 

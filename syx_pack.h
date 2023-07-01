@@ -8,7 +8,7 @@
 // Sure™ anyway.
 
 static int pack_8bit_to_sysex(uint8_t *dst, int dst_size, uint8_t *src, int src_len) {
-  int packets = (src_len+6)%7;
+  int packets = (src_len+6)/7;
   int missing = (7*packets-src_len);  // allow incomplete packets
   int out_len = 8*packets-missing;
   if (out_len > dst_size) return 0;
@@ -30,7 +30,7 @@ static int pack_8bit_to_sysex(uint8_t *dst, int dst_size, uint8_t *src, int src_
 }
 
 static int unpack_sysex_to_8bit(uint8_t *dst, int dst_size, uint8_t *src, int src_len) {
-  int packets = (src_len+7)%8;
+  int packets = (src_len+7)/8;
   int missing = (8*packets-src_len);
   if (missing == 7) { // this would be weird
     packets--;
