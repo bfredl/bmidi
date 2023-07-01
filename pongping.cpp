@@ -109,20 +109,28 @@ void big_sysex() {
   send_sysex(buffer, 96);
 }
 
+const int syx_off_ms = 30;
+const int render_off_ms = 100;
+
 int x = 0;
 void me_timer(void) {
     char ebuf[10];
     intToString(read_pos, ebuf);
-    OLED::popupText(ebuf, true);
+    //OLED::popupText(ebuf, true);
     timer_module_cb = me_timer;
-    uiTimerManager.setTimer(TIMER_MODULE, 1500);
 
     if (read_pos < write_pos) {
+      uiTimerManager.setTimer(TIMER_MODULE, syx_off_ms);
       for (int i = 0; i < 16; i++) {
         if (read_pos > write_pos) return;  // done, no retrig
         midiEngine.sendUsbMidiRaw(bulk_buffer[read_pos], 0);
         read_pos++;
       }
+    } else {
+      uiTimerManager.setTimer(TIMER_MODULE, render_off_ms);
+      write_pos = 0;
+      read_pos = 0;
+      pack_led();
     }
 }
 
@@ -149,7 +157,7 @@ extern void mod_main(int*,int*) {
    OLED::popupText(ebuf, true);
   x = 0;
   timer_module_cb = me_timer;
-  uiTimerManager.setTimer(TIMER_MODULE, 1500);
+  uiTimerManager.setTimer(TIMER_MODULE, syx_off_ms);
 
 }
 
