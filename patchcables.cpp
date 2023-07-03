@@ -143,16 +143,18 @@ void MenuItemPatchCableSelection::drawPixelsForOled() {
 
     const char* src_name = sourceToStringShort(src);  // exactly 4 chars
     const char* src2_name = sourceToStringShort(src2);
-    // const char* dest_name = getPatchedParamDisplayNameForOled(dest);
+    const char* dest_name = getPatchedParamDisplayNameForOled(dest);
 
-    memcpy(s, src_name, 4);
-    //intToString(src, s, 4);
+    //memcpy(s, src_name, 4);
+    intToString(src, s, 4);
     s[4] = ' ';
-    memcpy(s+5, src2_name, 4);
-    intToString(dest, s+9, 4);
+    // memcpy(s+5, src2_name, 4);
+    intToString(1000+src2, s+5, 4);
+    s[9] = ' ';
 
-    // strncpy(s+9, dest_name, (sizeof s) - 10);
-    // s[(sizeof s)-1] = 0;
+    //strncpy(s+10, dest_name, (sizeof textbuf[i]) - 10);
+    intToString(dest, s+10, 4);
+    s[(sizeof textbuf[i])-1] = 0;
 
     itemNames[i] = s;
   }
