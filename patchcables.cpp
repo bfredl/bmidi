@@ -8,6 +8,7 @@
 #include "gui/ui/sound_editor.h"
 #include "gui/menu_item/menu_item_patch_cable_strength.h"
 #include "gui/menu_item/menu_item_source_selection.h"
+#include <new>
 
 char const* sourceToStringShort(uint8_t source) {
 
@@ -51,7 +52,7 @@ char const* sourceToStringShort(uint8_t source) {
 }
 class MenuItemPatchCableSelection : public MenuItem {
 public:
-	MenuItemPatchCableSelection();
+	MenuItemPatchCableSelection() {}
 	void beginSession(MenuItem* navigatedBackwardFrom = NULL);
 	void selectEncoderAction(int offset) final;
 	void readValueAgain() final;
@@ -74,8 +75,12 @@ static char textbuf[OLED_MENU_NUM_OPTIONS_VISIBLE][24];
 
 
 void MenuItemPatchCableSelection::beginSession(MenuItem* navigatedBackwardFrom) {
+  name = "mod matrix";  // not here!!
+                        //
   // TODO: what happens if there is no items?
 	soundEditor.currentValue = 0;
+  selectedRowOnScreen = 0;
+  scrollPos = 0;
 
 	if (navigatedBackwardFrom) {
     // TODO: klippa till maxkabel
@@ -103,7 +108,17 @@ void MenuItemPatchCableSelection::drawPixelsForOled() {
 		itemNames[i] = NULL;
 	}
 
+  if (!soundEditor.currentParamManager) {
+    return;
+  }
+
   PatchCableSet *set = soundEditor.currentParamManager->getPatchCableSet();
+  if (!set) {
+    return;
+  }
+
+    //itemNames[0] = "ccc";
+    //drawItemsForOled(itemNames, selectedRowOnScreen);
 
 	for (int i = 0; i < OLED_MENU_NUM_OPTIONS_VISIBLE; i++) {
     int thisOption = scrollPos+i;
@@ -111,7 +126,11 @@ void MenuItemPatchCableSelection::drawPixelsForOled() {
       break;
     }
 
-    PatchCable *cable = &set->patchCables[0];
+    if (thisOption == soundEditor.currentValue) {
+      selectedRowOnScreen = i;
+    }
+
+    PatchCable *cable = &set->patchCables[thisOption];
     int src = cable->from;
     int src2 = -1;
     ParamDescriptor desc = cable->destinationParamDescriptor;
@@ -120,17 +139,20 @@ void MenuItemPatchCableSelection::drawPixelsForOled() {
     }
     int dest = desc.getJustTheParam();
 
+    char* s = textbuf[i];
+
     const char* src_name = sourceToStringShort(src);  // exactly 4 chars
     const char* src2_name = sourceToStringShort(src2);
-    const char* dest_name = getPatchedParamDisplayNameForOled(dest);
+    // const char* dest_name = getPatchedParamDisplayNameForOled(dest);
 
-    char* s = textbuf[i];
     memcpy(s, src_name, 4);
+    //intToString(src, s, 4);
     s[4] = ' ';
     memcpy(s+5, src2_name, 4);
+    intToString(dest, s+9, 4);
 
-    strncpy(s+9, dest_name, (sizeof s) - 9);
-    s[(sizeof s)-1] = 0;
+    // strncpy(s+9, dest_name, (sizeof s) - 10);
+    // s[(sizeof s)-1] = 0;
 
     itemNames[i] = s;
   }
@@ -141,6 +163,7 @@ void MenuItemPatchCableSelection::drawPixelsForOled() {
 void MenuItemPatchCableSelection::selectEncoderAction(int offset) {
 	int newValue = soundEditor.currentValue;
   newValue += offset;
+
 
   PatchCableSet *set = soundEditor.currentParamManager->getPatchCableSet();
 
@@ -155,7 +178,11 @@ void MenuItemPatchCableSelection::selectEncoderAction(int offset) {
 
 #if HAVE_OLED
 	if (soundEditor.currentValue < scrollPos) scrollPos = soundEditor.currentValue;
-	else if (offset >= 0 && selectedRowOnScreen == OLED_MENU_NUM_OPTIONS_VISIBLE - 1) scrollPos++;
+	else if (soundEditor.currentValue >= scrollPos + OLED_MENU_NUM_OPTIONS_VISIBLE) scrollPos++;
+
+  // char bufer[20];
+  // intToString(scrollPos, bufer, 4);
+  // OLED::popupText(bufer);
 
 	renderUIsForOled();
 #else
@@ -171,7 +198,8 @@ MenuItem* MenuItemPatchCableSelection::selectButtonPress() {
   if (val >= set->numPatchCables) {
     return MenuItem::selectButtonPress();
   }
-  PatchCable *cable = &set->patchCables[0];
+  PatchCable *cable = &set->patchCables[val];
+  s = val;
 
   if (cable->destinationParamDescriptor.isJustAParam()) {
     sourceSelectionMenuRegular.s = val;  // TODO: this is fugly, this value belongs in PatchCableStrengthMenu
@@ -182,9 +210,17 @@ MenuItem* MenuItemPatchCableSelection::selectButtonPress() {
   }
 }
 
+MenuItemPatchCableSelection myItem;
 
 extern void mod_main(int*,int*) {
+  new (&myItem) MenuItemPatchCableSelection();
+
   Clip *klip = currentSong->currentClip;
+  soundEditor.setup(klip, &myItem, 0);
+  openUI(&soundEditor);
+
+  return;
+
   if (klip->type != CLIP_TYPE_INSTRUMENT) return;
   InstrumentClip *clip = (InstrumentClip *)klip;
   Sound *sound;

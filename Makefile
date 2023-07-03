@@ -31,4 +31,4 @@ clean:
 	rm *.elf *.bin *.o
 
 %.exec : %.bin
-	./senddata hw:2,0,0 exec $<
+	./senddata hw:1,0,0 exec $<
