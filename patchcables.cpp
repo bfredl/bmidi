@@ -145,15 +145,15 @@ void MenuItemPatchCableSelection::drawPixelsForOled() {
     const char* src2_name = sourceToStringShort(src2);
     const char* dest_name = getPatchedParamDisplayNameForOled(dest);
 
-    //memcpy(s, src_name, 4);
-    intToString(src, s, 4);
+    memcpy(s, src_name, 4);
+    //intToString(src, s, 4);
     s[4] = ' ';
-    // memcpy(s+5, src2_name, 4);
-    intToString(1000+src2, s+5, 4);
+    memcpy(s+5, src2_name, 4);
+    // intToString(1000+src2, s+5, 4);
     s[9] = ' ';
 
-    //strncpy(s+10, dest_name, (sizeof textbuf[i]) - 10);
-    intToString(dest, s+10, 4);
+    strncpy(s+10, dest_name, (sizeof textbuf[i]) - 10);
+    // intToString(dest, s+10, 4);
     s[(sizeof textbuf[i])-1] = 0;
 
     itemNames[i] = s;
@@ -202,12 +202,17 @@ MenuItem* MenuItemPatchCableSelection::selectButtonPress() {
   }
   PatchCable *cable = &set->patchCables[val];
   s = val;
-
+  ParamDescriptor desc = cable->destinationParamDescriptor;
+  int dest = desc.getJustTheParam();
+  soundEditor.patchingParamSelected = dest;
   if (cable->destinationParamDescriptor.isJustAParam()) {
-    sourceSelectionMenuRegular.s = val;  // TODO: this is fugly, this value belongs in PatchCableStrengthMenu
+    // TODO: this is fugly, PatchCableStrengthMenu needs to be separated from sourceSelectionMenu
+    sourceSelectionMenuRegular.s = cable->from;
     return &patchCableStrengthMenuRegular;
   } else {
-    sourceSelectionMenuRange.s = val;
+    int src2 = desc.getTopLevelSource();
+    sourceSelectionMenuRegular.s = src2;
+    sourceSelectionMenuRange.s = cable->from;
     return &patchCableStrengthMenuRange;
   }
 }
