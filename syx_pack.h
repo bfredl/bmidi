@@ -50,6 +50,6 @@ static int unpack_sysex_to_8bit(uint8_t *dst, int dst_size, uint8_t *src, int sr
       }
     }
   }
-  return 8*packets;
+  return out_len;
 }
 

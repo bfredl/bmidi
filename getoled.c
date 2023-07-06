@@ -7,7 +7,7 @@ const char *(blocky[]) = {" ", "▀", "▄", "█"};
 
 void work(uint8_t *data, int len) {
   uint8_t bollbuffer[32];
-  if (data[1] != 0x7f && data[2] != 2 && data[3] != 0x40) {
+  if (data[1] != 0x7e && data[2] != 2 && data[3] != 0x40) {
     printf("konstig\n");
     return;
   }
@@ -15,7 +15,8 @@ void work(uint8_t *data, int len) {
   int xpos = data[6];
   const int blk_width = 32;
   //printf("\nXMISSION %d %d w %d OUTER-SIZ %d\n", xpos, ypos, blk_width, len);
-  unpack_sysex_to_8bit(bollbuffer, 32, data+7, len-8);
+  int kniff = unpack_sysex_to_8bit(bollbuffer, 32, data+7, len-8);
+  // printf("galong %d %d %d\n", ypos, xpos, kniff);
 
   for (int rstride = 0; rstride < 4; rstride++) {
     printf("\033[%d;%dH", (4*ypos+rstride)+1, xpos*blk_width+1);
@@ -53,15 +54,17 @@ int main(int argc, char **argv)
     }
 
     for (ssize_t i = 0; i < res; i++) {
-      // printf("%02x ", buffer[bpos+i]);
-      // if ((i>0 && i%8==0) || i == res-1 || buffer[i] == 0xf7) printf("\n");
+      //printf("%02x ", buffer[bpos+i]);
+      //if ((i>0 && i%8==0) || i == res-1 || buffer[i] == 0xf7) printf("\n");
     }
 
     for (ssize_t i = 0; i < res; i++) {
       if (buffer[bpos+i] == 0xf0) {
         sysex_start = bpos+i;
+        // printf("begin: %02x\n", sysex_start);
       } else if (buffer[bpos+i] == 0xf7 && sysex_start >= 0) {
         int elen = bpos+i+1;
+        // printf("enda: %02x men %02x\n", elen, elen-sysex_start);
         work(buffer+sysex_start, elen-sysex_start);
         sysex_start = -1;
       }

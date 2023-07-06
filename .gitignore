@@ -6,3 +6,5 @@ DelugeFirmware
 *.bin
 *.elf
 getdata
+getoled
+fragaoled
