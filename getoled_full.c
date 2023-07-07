@@ -1,12 +1,15 @@
 #include <alsa/asoundlib.h>
 #include "bmidi.h"
 
+#include "stdbool.h"
 #include "syx_pack.h"
 
 const char *(blocky[]) = {" ", "▀", "▄", "█"};
 
 // TODO: need an event loop, for now use
 // watch -n 0.3 amidi -p hw:2,0,0 -S "F0 7D 02 00 00 F7"
+
+static bool bega = false;
 
 void work(uint8_t *data, int len) {
   const int blk_width = 128;
@@ -32,6 +35,11 @@ void work(uint8_t *data, int len) {
   } else if (data[4] == 0x01) {
     // data[5]
     int kniff = unpack_sysex_to_8bit(bollbuffer, sizeof bollbuffer, data+6, len-7);
+    if (bega) {
+      fwrite(bollbuffer, kniff, 1, stdout);
+      fflush(stdout);
+      exit(1);
+    }
     //printf("%d\n", kniff);
     for (int blk = 0; ; blk++) {
       for (int rstride = 0; rstride < 4; rstride++) {
@@ -49,11 +57,15 @@ void work(uint8_t *data, int len) {
   }
 }
 
+
 int main(int argc, char **argv)
 {
-  if (argc < 1) return 1;
+  if (argc < 2) return 1;
   char *port_name = argv[1];
   static snd_rawmidi_t *input;
+  if (argc >= 3) {
+    bega = argv[2][0];
+  }
 
   int status = snd_rawmidi_open(&input, NULL, port_name, 0);
 
