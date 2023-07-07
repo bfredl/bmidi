@@ -53,3 +53,40 @@ static int unpack_sysex_to_8bit(uint8_t *dst, int dst_size, uint8_t *src, int sr
   return out_len;
 }
 
+static int pack_8to7_rle(uint8_t *dst, int dst_size, uint8_t *src, int src_len) {
+  int d = 0;
+  int s = 0;
+
+}
+
+static int unpack_7to8_rle(uint8_t *dst, int dst_size, uint8_t *src, int src_len) {
+  int d = 0;
+  int s = 0;
+
+  while (s+1 < src_len) {
+    uint8_t first = src[s++];
+    if (first < 64) {
+      int out_size = first+2;
+      int in_size = out_size + (out_size+6)/7;
+      if (in_size > src_len-s) return -1;
+      if (out_size > dst_size-d) return -11;
+      int unpacked = unpack_sysex_to_8bit(dst+d, out_size, src+s, in_size);
+      if (unpacked != out_size) return -2;
+      d += out_size;
+      s += in_size;
+    } else {
+      first = first-64;
+      int high = (first&1);
+      int runlen = first >> 1;
+      if (runlen == 31) {
+        runlen = 32 + src[s++];
+        if (s == src_len) return -3;
+      }
+      int byte = src[s++] + 128*high;
+      if (runlen > dst_size-d) return -12;
+      memset(dst+d, byte, runlen);
+      dst += d;
+    }
+  }
+  return d;
+}
