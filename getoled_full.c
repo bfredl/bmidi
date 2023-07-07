@@ -5,16 +5,19 @@
 
 const char *(blocky[]) = {" ", "▀", "▄", "█"};
 
+// TODO: need an event loop, for now use
+// watch -n 0.3 amidi -p hw:2,0,0 -S "F0 7D 02 00 00 F7"
+
 void work(uint8_t *data, int len) {
   const int blk_width = 128;
   uint8_t bollbuffer[blk_width];
-  if (data[1] != 0x7e && data[2] != 2 && data[3] != 0x40) {
+  if (data[1] != 0x7e && data[2] != 2 && data[3] != 0x40 && data[4] != 0x00) {
     printf("konstig\n");
     return;
   }
   int ypos = data[5];
-  //printf("\nXMISSION %d %d w %d OUTER-SIZ %d\n", xpos, ypos, blk_width, len);
-  int kniff = unpack_sysex_to_8bit(bollbuffer, blk_width, data+7, len-8);
+  // printf("\nXMISSION %d %d w %d OUTER-SIZ %d\n", -7, ypos, blk_width, len);
+  int kniff = unpack_sysex_to_8bit(bollbuffer, blk_width, data+6, len-7);
   // printf("galong %d %d %d\n", ypos, data[6], kniff);
 
   for (int rstride = 0; rstride < 4; rstride++) {
