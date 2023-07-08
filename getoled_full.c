@@ -14,25 +14,11 @@ static bool bega = false;
 void work(uint8_t *data, int len) {
   const int blk_width = 128;
   uint8_t bollbuffer[1024];
-  if (data[1] != 0x7e && data[2] != 2 && data[3] != 0x40) {
+  if (data[1] != 0x7e || data[2] != 2 || data[3] != 0x40) {
     printf("konstig\n");
     return;
   }
-  if (data[4] == 0x00) {
-    int ypos = data[5];
-    // printf("\nXMISSION %d %d w %d OUTER-SIZ %d\n", -7, ypos, blk_width, len);
-    int kniff = unpack_sysex_to_8bit(bollbuffer, blk_width, data+6, len-7);
-    // printf("galong %d %d %d\n", ypos, data[6], kniff);
-
-    for (int rstride = 0; rstride < 4; rstride++) {
-      printf("\033[%d;%dH", (4*ypos+rstride)+1, 1);
-      int mask = 3 << (2*rstride);
-      for (int j = 0; j < blk_width; j++) {
-        int idata = (bollbuffer[j] & mask) >> (2*rstride);
-        printf("%s", blocky[idata]);
-      }
-    }
-  } else if (data[4] == 0x01) {
+  if (data[4] == 0x01) {
     // data[5]
     int kniff = unpack_sysex_to_8bit(bollbuffer, sizeof bollbuffer, data+6, len-7);
     if (bega) {
@@ -54,6 +40,8 @@ void work(uint8_t *data, int len) {
         }
       }
     }
+  } else {
+    printf("DO NOT DO THAT\n");
   }
 }
 
