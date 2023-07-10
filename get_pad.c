@@ -9,6 +9,11 @@
 
 static bool bega = false;
 
+int kurv (uint8_t val) {
+  int adj = 20+val;
+  return adj > 255 ? 255 : adj;
+}
+
 void work(uint8_t *data, int len) {
   const int blk_width = 128;
   uint8_t bollbuffer[1024];
@@ -25,13 +30,17 @@ void work(uint8_t *data, int len) {
   uint8_t (*image)[18][3] = bollbuffer;
   //printf("%d\n", kniff);
   for (int line = 0; line < 8; line++) {
-    printf("\n");
-    for (int col = 0; col < 18; col++) {
-      if ((line*(18*3)+col*3) > kniff) {
-        return;
+    for (int dubbel = 0; dubbel < 2; dubbel++) {
+      printf("\n");
+      for (int col = 0; col < 18; col++) {
+        if ((line*(18*3)+col*3) > kniff) {
+          return;
+        }
+        uint8_t *c = image[7-line][col];
+        char *s = (!dubbel) ? " " : "▀";
+        printf("\x1b[%c8;2;%d;%d;%dm%s%s%s\x1b[0m ", ((!dubbel) ? '4' : '3'), kurv(c[0]), kurv(c[1]), kurv(c[2]), s, s, s);
+        if (col == 15) printf("   ");
       }
-      uint8_t *c = image[7-line][col];
-      printf("\x1b[48;2;%d;%d;%dm  \x1b[0m ", c[0], c[1], c[2]);
     }
   }
   printf("\n\n");
