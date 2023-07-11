@@ -1,0 +1,30 @@
+1..(1+9): update colors for DOS columns, payload 2*8*3 bytes
+10..(18) select blink color (issue just before blink?)
+
+18: set debounce time +1 byte payload
+20,21: +4 bytes: set gold knob indicator leds 
+22:  RESEND_BUTTON_STATES_MESSAGE
+23: set flash lenght
+
+24..152 blink main pad (24+y+(x*8))
+no, would conflict (152..168 _presumably_ blinK side bar (24+y+(x*8)))
+152..188 : set led off
+188..224 : set led on (or reverse, check)
+
+224: numeric display + 4byte payload
+
+225: set uart speed +1 byte payload
+
+228+row (likely more general) + 3 byte color payload for the right most column??
+more likely: scrolled in blank space, regardless of direction
+
+236..240: setupscroll, bitflags: 1 for direction, 2 for 18col width
+240: something relevant for scrolling
+
+244: set interrupt interval
+
+245: request PIC firmware version
+247: enable oled
+248: "select oled"
+249: "deselect oled"
+
