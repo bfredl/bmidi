@@ -21,6 +21,10 @@ more likely: scrolled in blank space, regardless of direction
 236..240: setupscroll, bitflags: 1 for direction, 2 for 18col width
 240: something relevant for scrolling
 
+241,242: vertical scroll
+
+243: set dimmer interval +byte
+
 244: set interrupt interval
 
 245: request PIC firmware version
