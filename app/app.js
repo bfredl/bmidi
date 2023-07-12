@@ -20,8 +20,8 @@ window.addEventListener('load', function() {
   }
 });
 
-function dobuton() {
-  console.log("did buton");
+function dobutton() {
+  console.log("did button");
 
    for (const entry of midi.inputs) {
     const input = entry[1];
@@ -33,7 +33,7 @@ function dobuton() {
         ` version:'${input.version}'`,
     );
 
-     if (input.name == "Deluge MIDI 3") {
+     if (input.name.includes("Deluge MIDI 3")) {
        delugeIn = input;
      }
   }
@@ -50,8 +50,11 @@ function dobuton() {
   }
 
   if (delugeIn != null && delugeOut != null) {
+    alert("found deluge!");
     console.log("huzzah!");
     delugeOut.send([0xf0, 0x7d, 0x01, 0xf7]);
+  } else {
+    alert("no deluge.");
   }
 
 
