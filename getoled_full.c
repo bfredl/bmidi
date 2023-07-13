@@ -3,6 +3,7 @@
 
 #include "stdbool.h"
 #include "syx_pack.h"
+#include "rle_pack2.h"
 
 const char *(blocky[]) = {" ", "▀", "▄", "█"};
 
@@ -13,35 +14,41 @@ static bool bega = false;
 
 void work(uint8_t *data, int len) {
   const int blk_width = 128;
-  uint8_t bollbuffer[1024];
+  uint8_t databuffer[1024];
   if (data[1] != 0x7d || data[2] != 2 || data[3] != 0x40) {
     printf("konstig\n");
     return;
   }
-  if (data[4] == 0x01) {
+  if (data[4] < 0x02) {
     // data[5]
-    int kniff = unpack_sysex_to_8bit(bollbuffer, sizeof bollbuffer, data+6, len-7);
+    int size;
+    if (data[4]) {
+      size = unpack_7to8_rle(databuffer, sizeof databuffer, data+6, len-7);
+    } else {
+      size = unpack_sysex_to_8bit(databuffer, sizeof databuffer, data+6, len-7);
+    }
     if (bega) {
-      fwrite(bollbuffer, kniff, 1, stdout);
+      fwrite(databuffer, size, 1, stdout);
       fflush(stdout);
       exit(1);
     }
-    //printf("%d\n", kniff);
+    //printf("%d\n", size);
     printf("\n");
     for (int blk = 0; ; blk++) {
       for (int rstride = 0; rstride < 4; rstride++) {
         printf("\n");
         int mask = 3 << (2*rstride);
         for (int j = 0; j < blk_width; j++) {
-          if ((blk*blk_width+j) > kniff) {
-            return;
+          if ((blk*blk_width+j) > size) {
+            goto enda;
           }
-          int idata = (bollbuffer[blk*blk_width+j] & mask) >> (2*rstride);
+          int idata = (databuffer[blk*blk_width+j] & mask) >> (2*rstride);
           printf("%s", blocky[idata]);
         }
       }
     }
-    printf("\n");
+enda:
+    printf("\nsize: %d\n", len-7);
   } else {
     printf("DO NOT DO THAT\n");
   }
