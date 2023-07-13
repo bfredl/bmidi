@@ -4,7 +4,7 @@
 #include "stdbool.h"
 #include "syx_pack.h"
 
-const char *(blocky[]) = {" ", "▀", "▄", "█"};
+const char *(blocky[]) = {" ", "█"};
 
 // TODO: need an event loop, for now use
 // watch -n 0.3 amidi -p hw:2,0,0 -S "F0 7D 02 00 00 F7"
@@ -14,11 +14,11 @@ static bool bega = false;
 void work(uint8_t *data, int len) {
   const int blk_width = 128;
   uint8_t bollbuffer[1024];
-  if (data[1] != 0x7d || data[2] != 2 || data[3] != 0x40) {
+  if (data[1] != 0x7d || data[2] != 2 || data[3] != 0x41) {
     printf("konstig\n");
     return;
   }
-  if (data[4] == 0x01) {
+  if (data[4] == 0x00) {
     // data[5]
     int kniff = unpack_sysex_to_8bit(bollbuffer, sizeof bollbuffer, data+6, len-7);
     if (bega) {
@@ -26,19 +26,28 @@ void work(uint8_t *data, int len) {
       fflush(stdout);
       exit(1);
     }
-    //printf("%d\n", kniff);
-    printf("\n");
-    for (int blk = 0; ; blk++) {
+    printf("\n\n");
+    for (int row = 0; row < 11; row++) {
+      printf("\n");
+      int mid = 8, left = 8, right = 8;
+      if (row == 0) mid = 6;
+      else if (row < 4) { left = 1; right = 5; }
+      else if (row == 4) mid = 0;
+      else if (row < 8) { left = 2; right = 4; }
+      else if (row == 8) mid = 3;
+      else if (row == 10) right = 7;
       for (int rstride = 0; rstride < 4; rstride++) {
-        printf("\n");
-        int mask = 3 << (2*rstride);
-        for (int j = 0; j < blk_width; j++) {
-          if ((blk*blk_width+j) > kniff) {
-            return;
-          }
-          int idata = (bollbuffer[blk*blk_width+j] & mask) >> (2*rstride);
-          printf("%s", blocky[idata]);
+        if (rstride > kniff) {
+          break;
         }
+        int midval = (bollbuffer[rstride] & (1 << mid)) != 0;
+        int leftval = (bollbuffer[rstride] & (1 << left)) != 0;
+        int rightval = (bollbuffer[rstride] & (1 << right)) != 0;
+        printf("%s", blocky[leftval]); //LEFT
+        for (int i = 0; i < 5; i++) {
+          printf("%s", blocky[midval]);
+        }
+        printf("%s     ", blocky[rightval]); //RIGHT
       }
     }
     printf("\n");
