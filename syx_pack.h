@@ -142,7 +142,7 @@ static int unpack_7to8_rle(uint8_t *dst, int dst_size, uint8_t *src, int src_len
         if (s == src_len) return -3;
       }
       int byte = src[s++] + 128*high;
-      printf("repeat: %d (%d)\n", runlen, byte);
+      // printf("repeat: %d (%d)\n", runlen, byte);
       if (runlen > dst_size-d) return -12;
       memset(dst+d, byte, runlen);
       d += runlen;

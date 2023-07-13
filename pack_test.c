@@ -1,6 +1,7 @@
 #include "stdio.h"
 #include "stdlib.h"
-#include "syx_pack.h"
+// #include "syx_pack.h"
+#include "rle_pack2.h"
 
 #define SIZ 2048
 int main(int argc, char **argv)
@@ -25,6 +26,8 @@ int main(int argc, char **argv)
     printf("unpack size fail: %d\n", unpacked_size);
     return 7;
   }
+
+  printf("packed size: %d\n", packed_size);
 
   if (memcmp(in_buf, check_buf, in_size)) {
     printf("fail!\n");
