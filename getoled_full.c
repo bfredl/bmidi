@@ -14,7 +14,7 @@ static bool bega = false;
 void work(uint8_t *data, int len) {
   const int blk_width = 128;
   uint8_t bollbuffer[1024];
-  if (data[1] != 0x7e || data[2] != 2 || data[3] != 0x40) {
+  if (data[1] != 0x7d || data[2] != 2 || data[3] != 0x40) {
     printf("konstig\n");
     return;
   }
