@@ -7,16 +7,12 @@ const char *(blocky[]) = {" ", "▀", "▄", "█"};
 
 void work(uint8_t *data, int len) {
   uint8_t bollbuffer[32];
-  if (data[1] != 0x7e || data[2] != 2 || data[3] != 0x41 || len < 6) {
+  if (data[1] != 0x7d || data[2] != 3 || data[3] != 0x40 || len < 6) {
     printf("konstig\n");
     return;
   }
-  int ln = data[4];
   int lenny = len - 6;
   fwrite(data+5, 1, lenny, stdout);
-  if (ln) {
-    printf("\n");
-  }
   fflush(stdout);
 }
 
