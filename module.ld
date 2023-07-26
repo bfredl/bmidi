@@ -9,7 +9,7 @@ MEMORY
 SECTIONS
 {
 
-.reset module_data :
+.reset loadable_mod_data :
 {
   *startup.o (.text)
 } > RAM012L

@@ -15,3 +15,4 @@ get_pad
 get7seg
 pack_test
 bwren
+loadmod

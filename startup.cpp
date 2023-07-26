@@ -1,5 +1,6 @@
-int mod_main(int *base, int *bytta);
+int mod_main();
 
-extern "C" int mod_start(int *base, int* bytta) {
-  return mod_main(base, bytta);
+extern "C" int mod_start() {
+  // TODO: ctors
+  return mod_main();
 }
