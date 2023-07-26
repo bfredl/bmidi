@@ -1,37 +1,39 @@
-#include "oled.h"
-#include <RootUI.h>
+#include "hid/display/oled.h"
+//#include <RootUI.h>
 #include <new>
 #include "extern.h"
-#include "soundeditor.h"
-#include <soundinstrument.h>
-#include "song.h"
-#include "InstrumentClip.h"
-#include "NoteRow.h"
-#include "ModelStack.h"
-#include "kit.h"
+#include "gui/ui/ui.h"
+#include "gui/ui/sound_editor.h"
+#include "processing/sound/sound_instrument.h"
+#include "model/song/song.h"
+#include "model/clip/instrument_clip.h"
+#include "model/note/note_row.h"
+#include "model/model_stack.h"
+#include "model/drum/kit.h"
+#include "model/instrument/melodic_instrument.h"
 
 class MultiScreen final : public UI {
 public:
   MultiScreen() {};
-  int padAction(int x, int y, int velocity);
-  int buttonAction(int x, int y, bool on, bool inCardRoutine);
+  ActionResult padAction(int x, int y, int velocity) override;
+  ActionResult buttonAction(hid::Button b, bool on, bool inCardRoutine) override;
 
 #if HAVE_OLED
-  void renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]);
+  void renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) override;
 #endif
 
   bool did_button = false;
 };
 
-int MultiScreen::padAction(int x, int y, int velocity) {
-  if (x >= displayWidth) return ACTION_RESULT_DEALT_WITH;
+ActionResult MultiScreen::padAction(int x, int y, int velocity) {
+  if (x >= kDisplayWidth) return ActionResult::DEALT_WITH;
 
   if (sdRoutineLock && !allowSomeUserActionsEvenWhenInCardRoutine) {
-    return ACTION_RESULT_REMIND_ME_OUTSIDE_CARD_ROUTINE; // Allow some of the time when in card routine.
+    return ActionResult::REMIND_ME_OUTSIDE_CARD_ROUTINE; // Allow some of the time when in card routine.
   }
 
-  int soundEditorResult = soundEditor.potentialShortcutPadAction(x, y, velocity);
-  if (soundEditorResult != ACTION_RESULT_NOT_DEALT_WITH) {
+  ActionResult soundEditorResult = soundEditor.potentialShortcutPadAction(x, y, velocity);
+  if (soundEditorResult != ActionResult::NOT_DEALT_WITH) {
     return soundEditorResult;
   }
 
@@ -41,7 +43,7 @@ int MultiScreen::padAction(int x, int y, int velocity) {
   if (y == 0) {
     Output *out = currentSong->firstOutput;
     while (out) {
-      if (out->type == INSTRUMENT_TYPE_KIT) {
+      if (out->type == InstrumentType::KIT) {
         break;
       }
       out = out->next;
@@ -49,7 +51,7 @@ int MultiScreen::padAction(int x, int y, int velocity) {
 
     if (!out) {
       OLED::popupText("no out", true);
-      return ACTION_RESULT_DEALT_WITH;
+      return ActionResult::DEALT_WITH;
     }
 
     auto kit = (Kit *)out;
@@ -57,14 +59,14 @@ int MultiScreen::padAction(int x, int y, int velocity) {
 
     if (!clip) {
       OLED::popupText("no clip", true);
-      return ACTION_RESULT_DEALT_WITH;
+      return ActionResult::DEALT_WITH;
     }
     ModelStackWithTimelineCounter* modelStackWithTimelineCounter = modelStack->addTimelineCounter(clip);
 
     int noteRowIndex;
     if (x > clip->noteRows.getNumElements()) {
       OLED::popupText("too much row", true);
-      return ACTION_RESULT_DEALT_WITH;
+      return ActionResult::DEALT_WITH;
     }
     NoteRow* noteRow = clip->noteRows.getElement(x);
     int noteRowId;
@@ -72,13 +74,13 @@ int MultiScreen::padAction(int x, int y, int velocity) {
     ModelStackWithNoteRow* modelStackWithNoteRow = modelStackWithTimelineCounter->addNoteRow(noteRowId, noteRow);
     if (!noteRow) {
       OLED::popupText("no row", true);
-      return ACTION_RESULT_DEALT_WITH;
+      return ActionResult::DEALT_WITH;
     }
 
     Drum* drum = noteRow->drum;
     if (!drum) {
       OLED::popupText("no dram", true);
-      return ACTION_RESULT_DEALT_WITH;
+      return ActionResult::DEALT_WITH;
     }
 
     if (velocity) {
@@ -86,12 +88,12 @@ int MultiScreen::padAction(int x, int y, int velocity) {
     } else {
       kit->endAuditioningForDrum(modelStackWithNoteRow, drum);
     }
-    return ACTION_RESULT_DEALT_WITH;
+    return ActionResult::DEALT_WITH;
   }
 
   auto instrument = (MelodicInstrument*)currentSong->currentClip->output;
-  if (!instrument || instrument->type == INSTRUMENT_TYPE_KIT) {
-    return ACTION_RESULT_DEALT_WITH;
+  if (!instrument || instrument->type == InstrumentType::KIT) {
+    return ActionResult::DEALT_WITH;
   }
 
   int noteCode = 60+x;
@@ -99,7 +101,7 @@ int MultiScreen::padAction(int x, int y, int velocity) {
     // Ensure the note the user is trying to sound isn't already sounding
     NoteRow* noteRow = ((InstrumentClip*)instrument->activeClip)->getNoteRowForYNote(noteCode);
     if (noteRow) {
-      if (noteRow->soundingStatus == STATUS_SEQUENCED_NOTE) return ACTION_RESULT_DEALT_WITH;
+      if (noteRow->soundingStatus == STATUS_SEQUENCED_NOTE) return ActionResult::DEALT_WITH;
     }
 
     int velocityToSound = 16*y;
@@ -108,30 +110,31 @@ int MultiScreen::padAction(int x, int y, int velocity) {
     instrument->endAuditioningForNote(modelStack, noteCode);
   }
 
-  return ACTION_RESULT_DEALT_WITH;
+  return ActionResult::DEALT_WITH;
 }
 
 #if HAVE_OLED
 void MultiScreen::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
-  const char *text = did_button ? "buton" : "Halloj";
-  OLED::drawString(text, 0, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, TEXT_SPACING_X, TEXT_SIZE_Y_UPDATED);
+  const char *text = did_button ? "buton" : "MULTI SCREEN";
+  OLED::drawString(text, 0, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, kTextSpacingX, kTextSizeYUpdated);
 }
 #endif
 
-int MultiScreen::buttonAction(int x, int y, bool on, bool inCardRoutine) {
-  if (x == clipViewButtonX && y == clipViewButtonY) {
+ActionResult MultiScreen::buttonAction(hid::Button b, bool on, bool inCardRoutine) {
+  using namespace hid::button;
+  if (b == CLIP_VIEW) {
     did_button = true;
     renderUIsForOled();
-    return ACTION_RESULT_DEALT_WITH;
-  } else if (x == backButtonX && y == backButtonY) {
+    return ActionResult::DEALT_WITH;
+  } else if (b == BACK) {
     close();
   }
-  return ACTION_RESULT_DEALT_WITH;
+  return ActionResult::DEALT_WITH;
 }
 
 static MultiScreen multiscreen;
 
-extern void mod_main(int*,int*) {
+extern void mod_main() {
   new (&multiscreen) MultiScreen;
   // This (with RootUI parent class) doesn't work
   // changeRootUI(&multiscreen);

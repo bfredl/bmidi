@@ -28,4 +28,4 @@ clean:
 	rm *.elf *.bin *.o
 
 %.exec : %.bin
-	./senddata hw:1,0,0 exec $<
+	./loadmod hw:1,0,0 $<
