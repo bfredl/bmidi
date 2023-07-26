@@ -11,12 +11,18 @@
 #include "model/model_stack.h"
 #include "model/drum/kit.h"
 #include "model/instrument/melodic_instrument.h"
+#include "io/debug/module.h"
 
 class MultiScreen final : public UI {
 public:
   MultiScreen() {};
   ActionResult padAction(int x, int y, int velocity) override;
   ActionResult buttonAction(hid::Button b, bool on, bool inCardRoutine) override;
+
+	bool renderMainPads(uint32_t whichRows, uint8_t image[][kDisplayWidth + kSideBarWidth][3],
+	                    uint8_t occupancyMask[][kDisplayWidth + kSideBarWidth], bool drawUndefinedArea = false);
+	bool renderSidebar(uint32_t whichRows, uint8_t image[][kDisplayWidth + kSideBarWidth][3],
+	                   uint8_t occupancyMask[][kDisplayWidth + kSideBarWidth]);
 
 #if HAVE_OLED
   void renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) override;
@@ -115,7 +121,7 @@ ActionResult MultiScreen::padAction(int x, int y, int velocity) {
 
 #if HAVE_OLED
 void MultiScreen::renderOLED(uint8_t image[][OLED_MAIN_WIDTH_PIXELS]) {
-  const char *text = did_button ? "buton" : "MULTI SCREEN";
+  const char *text = did_button ? "buton" : "MULTIPLE SCREEN";
   OLED::drawString(text, 0, 5, OLED::oledMainImage[0], OLED_MAIN_WIDTH_PIXELS, kTextSpacingX, kTextSizeYUpdated);
 }
 #endif
@@ -125,6 +131,7 @@ ActionResult MultiScreen::buttonAction(hid::Button b, bool on, bool inCardRoutin
   if (b == CLIP_VIEW) {
     did_button = true;
     renderUIsForOled();
+    uiNeedsRendering(this, 0xFFFFFFFF, 0xFFFFFFFF);
     return ActionResult::DEALT_WITH;
   } else if (b == BACK) {
     close();
@@ -132,12 +139,61 @@ ActionResult MultiScreen::buttonAction(hid::Button b, bool on, bool inCardRoutin
   return ActionResult::DEALT_WITH;
 }
 
+// change the coleur
+void color(uint8_t *colour, int r, int g, int b) {
+  colour[0] = r;
+  colour[1] = g;
+  colour[2] = b;
+}
+
+bool MultiScreen::renderMainPads(uint32_t whichRows, uint8_t image[][kDisplayWidth + kSideBarWidth][3],
+	                    uint8_t occupancyMask[][kDisplayWidth + kSideBarWidth], bool drawUndefinedArea) {
+	if (!image) {
+		return true;
+	}
+
+  return true;
+}
+	bool MultiScreen::renderSidebar(uint32_t whichRows, uint8_t image[][kDisplayWidth + kSideBarWidth][3],
+	                   uint8_t occupancyMask[][kDisplayWidth + kSideBarWidth]) {
+
+	if (!image) {
+		return true;
+	}
+	for (int i = 0; i < kDisplayHeight; i++) {
+		if (!(whichRows & (1 << i))) continue;
+    uint8_t* thisColour = image[i][kDisplayWidth];
+    color(image[i][kDisplayWidth], 15*i, 15*i, 14*i);
+  }
+
+  return true;
+}
+
 static MultiScreen multiscreen;
 
+class MyMod : public LoadableModule {
+  void unload();
+
+  void activate();
+} mymod;
+
+void MyMod::unload() {
+  if (isUIOpen(&multiscreen)) {
+    multiscreen.close();
+  }
+}
+
+void MyMod::activate() {
+  openUI(&multiscreen);
+}
+
 extern void mod_main() {
+  new (&mymod) MyMod;
   new (&multiscreen) MultiScreen;
   // This (with RootUI parent class) doesn't work
   // changeRootUI(&multiscreen);
+
+  loadable_module = &mymod;
 
   openUI(&multiscreen);
 }
