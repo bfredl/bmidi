@@ -208,15 +208,7 @@ class MyMod : public LoadableModule {
 extern int8_t numUIsOpen;
 void MyMod::unload() {
   if (isUIOpen(&multiscreen)) {
-    Debug::print("num uis when close:");
-    Debug::println(numUIsOpen);
     multiscreen.close();
-
-    Debug::print("AND THEN:");
-    Debug::println(numUIsOpen);
-
-    Debug::print("but the mode:");
-    Debug::println(currentUIMode);
     currentUIMode = 0;
   }
 }
@@ -228,13 +220,8 @@ void MyMod::activate() {
   currentUIMode = 0; // not learning
   indicator_leds::setLedState(IndicatorLED::LEARN, false);
 
-  Debug::print("num uis b4 open:");
-  Debug::println(numUIsOpen);
-
   openUI(&multiscreen);
 
-  Debug::print("num uis AFTER open:");
-  Debug::println(numUIsOpen);
 }
 
 extern void mod_main() {
