@@ -225,8 +225,6 @@ void MyMod::activate() {
 }
 
 extern void mod_main() {
-  new (&mymod) MyMod;
-  new (&multiscreen) MultiScreen;
   // This (with RootUI parent class) doesn't work
   // changeRootUI(&multiscreen);
 
