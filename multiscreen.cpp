@@ -12,6 +12,18 @@
 #include "model/drum/kit.h"
 #include "model/instrument/melodic_instrument.h"
 #include "io/debug/module.h"
+#include "io/debug/print.h"
+#include "gui/ui_timer_manager.h"
+#include "hid/led/indicator_leds.h"
+
+struct Layer {
+  int x;
+  int y;
+  int w;
+  int h;
+  uint8_t color[3];
+} layers[2] = {{2,1,3,4,{20,20,150}}, {8, 5, 2, 2, {0,130,0}}};
+int n_layers = 2;
 
 class MultiScreen final : public UI {
 public:
@@ -152,6 +164,22 @@ bool MultiScreen::renderMainPads(uint32_t whichRows, uint8_t image[][kDisplayWid
 		return true;
 	}
 
+	for (int i = 0; i < kDisplayHeight; i++) {
+		if (!(whichRows & (1 << i))) continue;
+
+    memset(image[i][0], 0, 16*3);
+
+    for (int z = 0; z < n_layers; z++) {
+      Layer &l = layers[z];
+      if (i < l.y || l.y+l.h <= i) {
+        continue;
+      }
+
+      for (int k = 0; k < l.w; k++) {
+        memcpy(image[i][l.x+k], l.color, 3);
+      }
+    }
+  }
   return true;
 }
 	bool MultiScreen::renderSidebar(uint32_t whichRows, uint8_t image[][kDisplayWidth + kSideBarWidth][3],
@@ -177,14 +205,36 @@ class MyMod : public LoadableModule {
   void activate();
 } mymod;
 
+extern int8_t numUIsOpen;
 void MyMod::unload() {
   if (isUIOpen(&multiscreen)) {
+    Debug::print("num uis when close:");
+    Debug::println(numUIsOpen);
     multiscreen.close();
+
+    Debug::print("AND THEN:");
+    Debug::println(numUIsOpen);
+
+    Debug::print("but the mode:");
+    Debug::println(currentUIMode);
+    currentUIMode = 0;
   }
 }
 
+
 void MyMod::activate() {
+  // TODO: not here:
+  uiTimerManager.unsetTimer(TIMER_MIDI_LEARN_FLASH);
+  currentUIMode = 0; // not learning
+  indicator_leds::setLedState(IndicatorLED::LEARN, false);
+
+  Debug::print("num uis b4 open:");
+  Debug::println(numUIsOpen);
+
   openUI(&multiscreen);
+
+  Debug::print("num uis AFTER open:");
+  Debug::println(numUIsOpen);
 }
 
 extern void mod_main() {
@@ -195,5 +245,5 @@ extern void mod_main() {
 
   loadable_module = &mymod;
 
-  openUI(&multiscreen);
+  // openUI(&multiscreen);
 }
