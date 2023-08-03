@@ -15,7 +15,5 @@ void MyMod::activate() {
 }
 
 extern void mod_main() {
-  new (&mymod) MyMod();
-  // OLED::popupText("halloj", true);
   loadable_module = &mymod;
 }

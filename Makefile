@@ -1,12 +1,12 @@
 DELUGE_PATH=./DelugeFirmware
-FW_INCLUDE = -I$(DELUGE_PATH)/src -I$(DELUGE_PATH)/src/deluge -I$(DELUGE_PATH)/src/fatfs -I$(DELUGE_PATH)/src/NE10/inc -includepreinclude_cxx.h
+FW_INCLUDE = -I$(DELUGE_PATH)/src -I$(DELUGE_PATH)/src/deluge -I$(DELUGE_PATH)/src/fatfs -I$(DELUGE_PATH)/src/NE10/inc -I$(DELUGE_PATH)/build/_deps/fmt-src/include
 
 # TODO: pic should not be used. we need to set the load adress explicitly
 BASEFLAGS = -mcpu=cortex-a9 -marm -mthumb-interwork -mlittle-endian -mfloat-abi=hard -mfpu=neon -Og  -fmessage-length=0 -fsigned-char
 CFLAGS = $(BASEFLAGS) $(FW_INCLUDE) -DHAVE_RTT=0 -DHAVE_OLED=1 -fno-rtti -fno-exceptions -fabi-version=0
-CXXFLAGS = $(CFLAGS)
+CXXFLAGS = $(CFLAGS) -std=gnu++20 
 
-FW_ELF = DelugeFirmware/dbt-build-debug-oled/Deluge-debug-oled.elf
+FW_ELF = DelugeFirmware/build/Debug/delugeOLED.elf
 CC = arm-none-eabi-gcc
 CXX = arm-none-eabi-g++
 
@@ -28,4 +28,4 @@ clean:
 	rm *.elf *.bin *.o
 
 %.exec : %.bin
-	./loadmod hw:1,0,0 $<
+	./loadmod hw:2,0,0 $<
