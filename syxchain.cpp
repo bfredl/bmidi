@@ -29,6 +29,14 @@ uint8_t *load_buf;
 size_t load_bufsize;
 size_t load_codesize;
 
+template <typename... T>
+void show(fmt::format_string<T...> fmt, T&&... args) {
+    char buf[200];
+    auto res = fmt::vformat_to_n(buf, 200, fmt, fmt::make_format_args(args...));
+    buf[res.size] = 0;
+    OLED::popupText(buf, true);
+}
+
 void MyMod::sysex(MIDIDevice* device, uint8_t* data, int32_t len) {
 	if (len < 7) {
 		return;
@@ -38,7 +46,7 @@ void MyMod::sysex(MIDIDevice* device, uint8_t* data, int32_t len) {
 	// first 4 bytes are already used, next is command
 	switch (data[4]) {
 	case 0: {
-    numericDriver.displayPopup(HAVE_OLED ? "hello" : "x");
+    //numericDriver.displayPopup(HAVE_OLED ? "hello" : "x");
     int pos = 512*(data[5]+0x80*data[6]);
     const int size = 512;
     const int packed_size = 586; // ceil(512+512/7)
@@ -48,7 +56,7 @@ void MyMod::sysex(MIDIDevice* device, uint8_t* data, int32_t len) {
 
     if (pos == 0) {
       uint8_t tmpbuf[0x40] __attribute__ ((aligned (CACHE_LINE_SIZE)));
-      unpack_7bit_to_8bit(tmpbuf, 0x40, data+7, len-8);
+      unpack_7bit_to_8bit(tmpbuf, 0x40, data+7, 0x4a);
       uint32_t user_code_start = *(uint32_t *)(tmpbuf + OFF_USER_CODE_START);
       uint32_t user_code_end = *(uint32_t *)(tmpbuf + OFF_USER_CODE_END);
       load_codesize = (int32_t)(user_code_end - user_code_start);
@@ -57,6 +65,9 @@ void MyMod::sysex(MIDIDevice* device, uint8_t* data, int32_t len) {
           GeneralMemoryAllocator::get().dealloc(load_buf);
         }
         load_bufsize = load_codesize + (511-((load_codesize-1)&511));
+
+        show("first {:x} 2nd {:x} ", load_codesize, load_bufsize);
+
         load_buf = (uint8_t*)GeneralMemoryAllocator::get().alloc(load_bufsize, NULL, false, true);
         if (load_buf == nullptr) {
           // fail :(
@@ -75,9 +86,10 @@ void MyMod::sysex(MIDIDevice* device, uint8_t* data, int32_t len) {
 
 	case 1: {
     numericDriver.displayPopup(HAVE_OLED ? "godby" : "y");
-		int size = 512*(data[4]+0x80*data[5]);
-    if (false && (load_buf != nullptr || size != load_codesize)) {
+		int size = 512*(data[5]+0x80*data[6]);
+    if ((load_buf == nullptr || size < load_codesize)) {
 			numericDriver.displayPopup(HAVE_OLED ? "wrong size?" : "SIZ FAIL");
+      show("SIIZ {:x} vs {:x} ", size, load_codesize);
       return;
     }
 		uint32_t checksum;
